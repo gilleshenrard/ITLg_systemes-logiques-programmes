@@ -50,3 +50,10 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# MPLabX files
+build/*
+debug/*
+dist/*
+nbproject/*
+Makefile
