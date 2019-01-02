@@ -36,8 +36,10 @@ temp_1	    RES 1
 temp_2	    RES 1
 temp_3	    RES 1
 	    
-#define	LED	    PORTD
-#define	TRIS_LED    TRISD
+#define	LED		PORTD
+#define	TRIS_LED	TRISD
+#define	BUTTON1		PORTB
+#define	TRIS_BUTTON1	TRISB
 
 ;*******************************************************************************
 ;
@@ -66,38 +68,45 @@ START
 ;----------------- Initialisation ----------------------------------------------
 stan_table				;table for LCD displays
 ;	    "XXXXXXXXXXXXXXXX"	;ptr:
-    data    " Gilles Henrard "	;0
-    data    "Dossier 18F8722 "	;16
-    data    "Yaaaaay clock!  "	;32
+#define TBL_INTRO1		.0
+    data    " Gilles Henrard "
+#define	TBL_INTRO2		.16
+    data    "Dossier 18F8722 "
+#define	TBL_MENU_DISPLAY	.32
+    data    "Affichage       "
+#define	TBL_MENU_CHOICE1	.48
+    data    "S1:Sel    S2:Svt"
+#define	TBL_MENU_SETTINGS	.64
+    data    "Reglage Temps   "
+#define	TBL_MENU_CHRONO		.80
+    data    "Chronometre     "
+#define	TBL_MENU_COUNTDOWN	.96
+    data    "Compte à rebours"
+#define	TBL_MENU_CLOCK		.112
+    data    "Horloge         "
+#define	TBL_MENU_CHOICE_CLOCK	.128
+    data    "S1:Sor  S2:24/12"
+#define	TBL_MENU_SET24		.144
+    data    "Regler a        "
+#define	TBL_MENU_CHOICE24	.160
+    data    "S1:Svt/Sor S2:++"
     
     clrf    TRIS_LED	    ;
     clrf    LED		    ; set PORTD as output and clear leds
 
     call    LCDInit	    ; initialize LCD
     call    ClearLCD	    ; clear the LCD
-    movlw   0		    ; 
+    movlw   TBL_INTRO1	    ; 
     movwf   ptr_pos	    ;
     call    stan_char_1	    ; send " Gilles Henrard " to the LCD line 1
-    movlw   .16		    ; 
+    movlw   TBL_INTRO2	    ; 
     movwf   ptr_pos	    ;
     call    stan_char_2	    ; send "Dossier 18F8722 " to the LCD line 2
     
     call    delay_1s	    ;
-    call    delay_1s	    ;
-    call    delay_1s	    ;
-    call    delay_1s	    ;
-    call    delay_1s	    ; freeze for 5 seconds to display the name
-
-;----------------- Main loop ---------------------------------------------------
-main
-    movlw   0x01
-    movwf   LED
-    call    delay_100ms
-    clrf    LED
-    call    delay_100ms
-    GOTO main		    ; loop forever
-
+    call    delay_1s	    ; freeze for 5 seconds to display the name 
     
+    goto    main
     
 ; ------------------------------------------------------------------------------
 ; -------------------------- LCD display routines-------------------------------
@@ -192,6 +201,22 @@ d100l1
     decfsz  temp_2,F
     bra	d100l1
     return
+
+    
+;----------------- Main loop ---------------------------------------------------
+main
+    call    ClearLCD	    ; clear the display
+    movlw   TBL_MENU_DISPLAY; 
+    movwf   ptr_pos	    ;
+    call    stan_char_1	    ; send "Affichage" to the LCD line 1
+    movlw   TBL_MENU_CHOICE1; 
+    movwf   ptr_pos	    ;
+    call    stan_char_2	    ; send "S1:Sel    S2:Svt" to the LCD line 2
+    
+menu_display
+    
+    goto    menu_display
+    GOTO    main	    ; loop forever
 
 ;----------------- End of main program ----------------------------------------
     END
