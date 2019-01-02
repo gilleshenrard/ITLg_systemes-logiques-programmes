@@ -35,6 +35,11 @@ ptr_count   RES 1
 temp_1	    RES 1
 temp_2	    RES 1
 temp_3	    RES 1
+w_temp	    RES 1
+status_temp RES 1
+bsr_temp    RES 1
+tick	    RES 1
+sec_tenth   RES 1
 	    
 #define	LED		PORTD
 #define	TRIS_LED	TRISD
@@ -42,22 +47,18 @@ temp_3	    RES 1
 #define	TRIS_BUTTON1	TRISB,0
 #define	BUTTON2		PORTA,5
 #define	TRIS_BUTTON2	TRISA,5
+#define	INT_TMR		INTCON,TMR0IF
 
 ;*******************************************************************************
 ;
 ; Reset Vector
 ;
 ;*******************************************************************************
-RES_VECT  CODE    0x0000            ; processor reset vector
+RES_VECT    CODE    0x0000            ; processor reset vector
     GOTO    START                   ; go to beginning of program
 
-;*******************************************************************************
-;
-; TODO Step #4 - Interrupt Service Routines
-;
-;*******************************************************************************
-
-; TODO INSERT ISR HERE
+INT_VECT  CODE    0x0008
+    GOTO    HighInterrupt
 
 ;*******************************************************************************
 ;
@@ -65,7 +66,47 @@ RES_VECT  CODE    0x0000            ; processor reset vector
 ;
 ;*******************************************************************************
 MAIN_PROG CODE                      ; let linker place main program
+ 
+ ;*******************************************************************************
+;
+; TODO Step #4 - Interrupt Service Routines
+;
+;*******************************************************************************
+HighInterrupt
+    ; 4 cycles to get in
+    movwf   w_temp		    ;save w (1 cycle)
+    movff   STATUS, status_temp	    ;save status (2 cycles)
+    movff   BSR, bsr_temp	    ;save bsr (2 cycles)
+    
+    bcf	    T0CON,7		    ; stop the timer0 (1 cycle)
+    bcf	    INT_TMR		    ;clear interrupt flag (1 cycle)
+    ; 45551 (65535 - 20000 + 16)
+    movlw   b'10110001'		    ; (1 cycle)
+    movwf   TMR0H   		    ;restore timer H value (1 cycle)
+    movlw   b'11101111'		    ; (1 cycle)
+    movwf   TMR0L		    ;restore timer L value (1 cycle)
+    bsf	    T0CON,7		    ; start the timer0 (1 cycle)
+    
+    incf    tick		    ; increment the time tick
+    movlw   0x32		    ;
+    cpfseq  tick		    ; check if tick == 50 (0.1 sec)
+    goto    int_end
+    
+    clrf    tick		    ; reset the tick counter
+    incf    sec_tenth		    ; increment 1/10 sec counter
 
+int_end
+    movff   bsr_temp, BSR	    ;restore bsr
+    movf    w_temp, w		    ;restore w
+    movff   status_temp, STATUS	    ;save status
+    
+    retfie
+    
+;*******************************************************************************
+;
+; TODO Step #4 - Interrupt Service Routines
+;
+;*******************************************************************************
 START
 ;----------------- Initialisation ----------------------------------------------
 stan_table				;table for LCD displays
@@ -111,6 +152,21 @@ stan_table				;table for LCD displays
     movwf   ADCON1	    ; set PORTA as digital
     bcf	    BUTTON2	    ; clear BUTTON2
     bsf	    TRIS_BUTTON2    ; set PORTA,5 as input
+    
+    movlw   b'00001000'	    ;
+    movwf   T0CON	    ; set the timer0 with prescaler disabled
+    movlw   b'10110001'	    ;
+    movwf   TMR0H	    ;
+    movlw   b'11011111'	    ;
+    movwf   TMR0L	    ; set the timer to 45535 (65535 - 20000) to get an interruption every 2 ms
+    bsf	    RCON,IPEN	    ; enable high priority interrupts
+    movlw   b'10100000'	    ;
+    movwf   INTCON	    ; enable GIE and TMR0 interrupts
+    movlw   b'10000100'	    ;
+    movwf   INTCON2	    ; set TMR0 interrupts as high priority
+    bsf	    T0CON,7	    ; start the timer0
+    
+    clrf    tick	    ; set time to 0
     
     call    delay_1s	    ;
     call    delay_1s	    ; freeze for 5 seconds to display the name 
@@ -210,6 +266,16 @@ d100l1
     decfsz  temp_2,F
     bra	d100l1
     return
+ 
+debounce_button1
+    btfss   BUTTON1	    ;
+    goto    $-2		    ; wait for user to release the button
+    return
+ 
+debounce_button2
+    btfss   BUTTON2	    ;
+    goto    $-2		    ; wait for user to release the button
+    return
 
     
 ;----------------- Main loop ---------------------------------------------------
@@ -222,13 +288,11 @@ main
     call    stan_char_2	    ; send "S1:Sel    S2:Svt" to the LCD line 2
     
 menu_display
-    btfsc   BUTTON1
-    ;display menu is selected
+    btfss   BUTTON1	    ; button1 pressed
+    goto    subroutine_display
     btfsc   BUTTON2
     goto    menu_display
-    btfss   BUTTON2
-    goto    $-2
-    ;display menu is selected
+    call    debounce_button2
     
     movlw   TBL_MENU_SETTINGS 
     movwf   ptr_pos	    ;
@@ -241,8 +305,7 @@ menu_settings
     ;display menu is selected
     btfsc   BUTTON2
     goto    menu_settings
-    btfss   BUTTON2
-    goto    $-2
+    call    debounce_button2
     ;display menu is selected
     
     movlw   TBL_MENU_CHRONO; 
@@ -256,8 +319,7 @@ menu_chrono
     ;display menu is selected
     btfsc   BUTTON2
     goto    menu_chrono
-    btfss   BUTTON2
-    goto    $-2
+    call    debounce_button2
     ;display menu is selected
     
     movlw   TBL_MENU_COUNTDOWN 
@@ -271,11 +333,26 @@ menu_countdown
     ;display menu is selected
     btfsc   BUTTON2
     goto    menu_countdown
-    btfss   BUTTON2
-    goto    $-2
+    call    debounce_button2
     ;display menu is selected
     
     GOTO    main	    ; loop forever
 
+    
+subroutine_display
+    call    debounce_button1
+    movff   sec_tenth,temp_wr
+    call    d_write
+    call    LCDLine_1
+    btfsc   BUTTON1
+    goto    subroutine_display
+    call    debounce_button1
+    goto    menu_display
+    
+subroutine_settings
+    call    debounce_button1
+    movlw   0x01
+    movwf   LED
+    goto    menu_settings
 ;----------------- End of main program ----------------------------------------
     END
