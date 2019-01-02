@@ -40,6 +40,7 @@ status_temp RES 1
 bsr_temp    RES 1
 tick	    RES 1
 sec_tenth   RES 1
+second	    RES 1
 	    
 #define	LED		PORTD
 #define	TRIS_LED	TRISD
@@ -94,6 +95,11 @@ HighInterrupt
     
     clrf    tick		    ; reset the tick counter
     incf    sec_tenth		    ; increment 1/10 sec counter
+    movlw   0x09
+    cpfsgt  sec_tenth
+    goto    int_end
+    clrf    sec_tenth
+    incf    second
 
 int_end
     movff   bsr_temp, BSR	    ;restore bsr
@@ -167,6 +173,8 @@ stan_table				;table for LCD displays
     bsf	    T0CON,7	    ; start the timer0
     
     clrf    tick	    ; set time to 0
+    clrf    sec_tenth	    ; set tenths of seconds to 0
+    clrf    second	    ; set seconds to 0
     
     call    delay_1s	    ;
     call    delay_1s	    ; freeze for 5 seconds to display the name 
@@ -341,7 +349,7 @@ menu_countdown
     
 subroutine_display
     call    debounce_button1
-    movff   sec_tenth,temp_wr
+    movff   second,temp_wr
     call    d_write
     call    LCDLine_1
     btfsc   BUTTON1
