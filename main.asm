@@ -196,6 +196,8 @@ stan_table				;table for LCD displays
     clrf    tick	    ; set time to 0
     clrf    sec_tenth	    ; set tenths of seconds to 0
     clrf    second	    ; set seconds to 0
+    clrf    minute	    ; set minutes to 0
+    clrf    hour	    ; set hours to 0
     
     call    delay_1s	    ;
     call    delay_1s	    ; freeze for 5 seconds to display the name 
@@ -411,25 +413,59 @@ menu_countdown
     
 subroutine_display
     call    debounce_button1	;wait for user to release the button
-    movf    second,w		;
-    call    bin_bcd		;transform the seconds value into BCD for LCD
     movlw   TBL_DISPLAY_CLOCK	;
     movwf   ptr_pos		;
     call    stan_char_1		;display the static part of the first line
+    movlw   TBL_MENU_CHOICE_CLOCK
+    movwf   ptr_pos		;
+    call    stan_char_2		;display the second part of the line
+    movlw   0x8D		;
+    call    LCDXY		;position the cursor at the right place
+    movlw   0x3A		;
+    movwf   temp_wr		;
+    call    d_write		;display ':'
+    movlw   0x8A		;
+    call    LCDXY		;position the cursor at the right place
+    movlw   0x3A		;
+    movwf   temp_wr		;
+    call    d_write		;display ':'
+
+subroutine_display_clock
+    movf    second,w		;
+    call    bin_bcd		;transform the seconds value into BCD for LCD
     movlw   0x8F		;
     call    LCDXY		;position the cursor at the right place
     movff   LSD,temp_wr		;
-    call    d_write		;display the unities
+    call    d_write		;display the unities of seconds
     movlw   0x8E		;
     call    LCDXY		;position the cursor at the right place
     movff   MsD,temp_wr		;
-    call    d_write		;display the tenths
-    movlw   0x8D		;
+    call    d_write		;display the decades of seconds
+    
+    movf    minute,w		;
+    call    bin_bcd		;transform the seconds value into BCD for LCD
+    movlw   0x8C		;
     call    LCDXY		;position the cursor at the right place
-    movff   MSD,temp_wr		;
-    call    d_write		;display the hundreds
-    btfsc   BUTTON1		;
-    goto    subroutine_display	; if the button1 hasn't been pressed
+    movff   LSD,temp_wr		;
+    call    d_write		;display the unities of seconds
+    movlw   0x8B		;
+    call    LCDXY		;position the cursor at the right place
+    movff   MsD,temp_wr		;
+    call    d_write		;display the decades of seconds
+    
+    movf    hour,w		;
+    call    bin_bcd		;transform the seconds value into BCD for LCD
+    movlw   0x89		;
+    call    LCDXY		;position the cursor at the right place
+    movff   LSD,temp_wr		;
+    call    d_write		;display the unities of seconds
+    movlw   0x88		;
+    call    LCDXY		;position the cursor at the right place
+    movff   MsD,temp_wr		;
+    call    d_write		;display the decades of seconds
+    
+    btfsc   BUTTON1		; if the button1 hasn't been pressed
+    goto    subroutine_display_clock
     call    debounce_button1	; otherwise
     goto    menu_display
     
