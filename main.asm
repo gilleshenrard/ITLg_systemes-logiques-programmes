@@ -161,8 +161,6 @@ stan_table
     data    "Regler a        "
 #define	TBL_MENU_CHOICE24	.160
     data    "S1:Svt/Sor S2:++"
-#define TBL_DISPLAY_CLOCK	.176
-    data    "Horloge         "
 
 ; -------------------------- Actual initialisation -----------------------------
     clrf    TRIS_LED	    ;
@@ -394,7 +392,8 @@ menu_display
     btfsc   BUTTON2
     goto    menu_display
     call    debounce_button2
-    
+
+menu_settings_lcd    
     movlw   TBL_MENU_SETTINGS 
     movwf   ptr_pos	    ;
     call    stan_char_1	    ; send "Reglage Temps   " to the LCD line 1
@@ -402,12 +401,11 @@ menu_display
     movwf   ptr_pos	    ;
     call    stan_char_2	    ; send "S1:Sel    S2:Svt" to the LCD line 2
 menu_settings
-    btfsc   BUTTON1
-    ;display menu is selected
+    btfss   BUTTON1
+    goto    subroutine_settings
     btfsc   BUTTON2
     goto    menu_settings
     call    debounce_button2
-    ;display menu is selected
     
     movlw   TBL_MENU_CHRONO; 
     movwf   ptr_pos	    ;
@@ -441,9 +439,10 @@ menu_countdown
 
 ; ------------------------------------------------------------------------------
 ; ---------------------------- Submenu routines --------------------------------
+; TIME DISPLAY ROUTINE
 subroutine_display
     call    debounce_button1	;wait for user to release the button
-    movlw   TBL_DISPLAY_CLOCK	;
+    movlw   TBL_MENU_CLOCK	;
     movwf   ptr_pos		;
     call    stan_char_1		;display the static part of the first line
     movlw   TBL_MENU_CHOICE_CLOCK
@@ -503,6 +502,21 @@ display_clock_button1
     goto    subroutine_display_clock
     call    debounce_button1	; otherwise
     goto    main
+    
+; TIME SETUP ROUTINE
+subroutine_settings
+    call    debounce_button1	;wait for user to release the button
+    movlw   TBL_MENU_SET24	;
+    movwf   ptr_pos		;
+    call    stan_char_1		;display the static part of the first line
+    movlw   TBL_MENU_CHOICE24
+    movwf   ptr_pos		;
+    call    stan_char_2		;display the second part of the line
+subroutine_settings_clock
+    btfsc   BUTTON1		; if the button1 hasn't been pressed
+    goto    subroutine_settings_clock
+    call    debounce_button1	; otherwise
+    goto    menu_settings_lcd
     
 ;*******************************************************************************
 ;
