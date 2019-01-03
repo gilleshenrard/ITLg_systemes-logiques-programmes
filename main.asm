@@ -73,9 +73,9 @@ INT_VECT  CODE    0x0008
 ;*******************************************************************************
 MAIN_PROG CODE                      ; let linker place main program
  
- ;*******************************************************************************
+;*******************************************************************************
 ;
-; TODO Step #4 - Interrupt Service Routines
+; Interrupt Service Routines
 ;
 ;*******************************************************************************
 HighInterrupt
@@ -129,12 +129,13 @@ int_end
     
 ;*******************************************************************************
 ;
-; TODO Step #4 - Interrupt Service Routines
+; Initialisation routine
 ;
 ;*******************************************************************************
 START
-;----------------- Initialisation ----------------------------------------------
-stan_table				;table for LCD displays
+
+; -------------------------- table for LCD displays ----------------------------
+stan_table
 ;	    "XXXXXXXXXXXXXXXX"	;ptr:
 #define TBL_INTRO1		.0
     data    " Gilles Henrard "
@@ -160,7 +161,8 @@ stan_table				;table for LCD displays
     data    "S1:Svt/Sor S2:++"
 #define TBL_DISPLAY_CLOCK	.176
     data    "Horloge         "
-    
+
+; -------------------------- Actual initialisation -----------------------------
     clrf    TRIS_LED	    ;
     clrf    LED		    ; set PORTD as output and clear leds
 
@@ -203,7 +205,12 @@ stan_table				;table for LCD displays
     call    delay_1s	    ; freeze for 5 seconds to display the name 
     
     goto    main
-    
+
+;*******************************************************************************
+;
+; Basic (reusable) routines
+;
+;*******************************************************************************
 ; ------------------------------------------------------------------------------
 ; -------------------------- LCD display routines-------------------------------
 stan_char_1
@@ -256,10 +263,14 @@ stan_next_char_2
 	bra	stan_next_char_2
 
 	return
-	
-;----------------------------------------------------------------------
-; Binary (8-bit) to BCD, 255 = highest possible result
-;----------------------------------------------------------------------
+
+LCDXY
+    movwf   temp_wr
+    rcall   i_write
+    return
+
+; ------------------------------------------------------------------------------
+; ---------- Binary (8-bit) to BCD, 255 = highest possible result --------------
 bin_bcd
     clrf    MSD
     clrf    MsD
@@ -291,14 +302,9 @@ over                    ;0 - 9, high nibble = 3 for LCD
     xorlw   0x30            ;convert to LCD digit
     movwf   LSD
     retlw   0
-
-;-------------------------------------------------------------------------------
-LCDXY
-    movwf   temp_wr
-    rcall   i_write
-    return
 	
-; -------------------------- Delay Routines ------------------------------------
+; ------------------------------------------------------------------------------
+; ---------------------------- Delay Routines ----------------------------------
 delay_1s                ;1 sec à 10Mhz instruction
     call    delay_100ms
     call    delay_100ms
@@ -350,7 +356,13 @@ debounce_button2
     return
 
     
-;----------------- Main loop ---------------------------------------------------
+;*******************************************************************************
+;
+; MAIN LOOP
+;
+;*******************************************************************************	
+; ------------------------------------------------------------------------------
+; ---------------------------- Main menu options -------------------------------
 main
     movlw   TBL_MENU_DISPLAY; 
     movwf   ptr_pos	    ;
@@ -410,7 +422,8 @@ menu_countdown
     
     GOTO    main	    ; loop forever
 
-    
+; ------------------------------------------------------------------------------
+; ---------------------------- Submenu routines --------------------------------
 subroutine_display
     call    debounce_button1	;wait for user to release the button
     movlw   TBL_DISPLAY_CLOCK	;
@@ -474,5 +487,10 @@ subroutine_settings
     movlw   0x01
     movwf   LED
     goto    menu_settings
-;----------------- End of main program ----------------------------------------
+    
+;*******************************************************************************
+;
+; END OF PROGRAM
+;
+;*******************************************************************************
     END
