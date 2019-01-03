@@ -5,7 +5,7 @@
 ;*                  													*
 ;* Based on : PICDEM HPC Explorer DEMO code. 					    	*
 ;************************************************************************
-list p=18F8722
+    list p=18F8722
 #include p18F8722.inc
 
 #define	LCD_E			temp_reg, 6	; LCD E clock
@@ -24,7 +24,7 @@ Dreg1 		res 1
 Dreg2 		res 1
 temp_reg 	res 1
                                                 
-GLOBAL	temp_wr
+    GLOBAL	temp_wr
 PROG1	CODE
 ;---------------------------------------------------------------
 ;LCD Initialization routine
