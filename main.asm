@@ -41,6 +41,8 @@ bsr_temp    RES 1
 tick	    RES 1
 sec_tenth   RES 1
 second	    RES 1
+minute	    RES 1
+hour	    RES 1
 MSD	    RES 1
 MsD	    RES 1
 LSD	    RES 1
@@ -98,11 +100,25 @@ HighInterrupt
     
     clrf    tick		    ; reset the tick counter
     incf    sec_tenth		    ; increment 1/10 sec counter
-    movlw   0x09
-    cpfsgt  sec_tenth
-    goto    int_end
-    clrf    sec_tenth
-    incf    second
+    movlw   .9			    ;
+    cpfsgt  sec_tenth		    ;
+    goto    int_end		    ;
+    clrf    sec_tenth		    ;
+    incf    second		    ; increment seconds if tenths == 10
+    movlw   .59			    ;
+    cpfsgt  second		    ;
+    goto    int_end		    ;
+    clrf    second		    ;
+    incf    minute		    ; increment minutes if seconds == 60
+    movlw   .59			    ;
+    cpfsgt  minute		    ;
+    goto    int_end		    ;
+    clrf    minute		    ;
+    incf    hour		    ; increment hours if minutes == 60
+    movlw   .23			    ;
+    cpfsgt  hour		    ;
+    goto    int_end		    ;
+    clrf    hour		    ; reset hours if == 24
 
 int_end
     movff   bsr_temp, BSR	    ;restore bsr
