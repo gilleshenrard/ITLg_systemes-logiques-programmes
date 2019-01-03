@@ -41,6 +41,9 @@ bsr_temp    RES 1
 tick	    RES 1
 sec_tenth   RES 1
 second	    RES 1
+MSD	    RES 1
+MsD	    RES 1
+LSD	    RES 1
 	    
 #define	LED		PORTD
 #define	TRIS_LED	TRISD
@@ -139,6 +142,8 @@ stan_table				;table for LCD displays
     data    "Regler a        "
 #define	TBL_MENU_CHOICE24	.160
     data    "S1:Svt/Sor S2:++"
+#define TBL_DISPLAY_CLOCK	.176
+    data    "Horloge         "
     
     clrf    TRIS_LED	    ;
     clrf    LED		    ; set PORTD as output and clear leds
@@ -233,6 +238,47 @@ stan_next_char_2
 	bra	stan_next_char_2
 
 	return
+	
+;----------------------------------------------------------------------
+; Binary (8-bit) to BCD, 255 = highest possible result
+;----------------------------------------------------------------------
+bin_bcd
+    clrf    MSD
+    clrf    MsD
+    movwf   LSD         ;move value to LSD
+gcptr_1reth
+    movlw   .100            ;subtract 100 from LSD
+    subwf   LSD,W
+    btfss   STATUS,C        ;is value greater then 100
+    bra     gtenth          ;NO goto tenths
+    movwf   LSD         ;YES, move subtraction result into LSD
+    incf    MSD,F           ;increment cptr_1reths
+    bra     gcptr_1reth
+gtenth
+    movlw   .10         ;take care of tenths
+    subwf   LSD,W
+    btfss   STATUS,C
+    bra     over            ;finished conversion
+    movwf   LSD
+    incf    MsD,F           ;increment tenths position
+    bra     gtenth
+over                    ;0 - 9, high nibble = 3 for LCD
+    movf    MSD,W           ;get BCD values ready for LCD display
+    xorlw   0x30            ;convert to LCD digit
+    movwf   MSD
+    movf    MsD,W
+    xorlw   0x30            ;convert to LCD digit
+    movwf   MsD
+    movf    LSD,W
+    xorlw   0x30            ;convert to LCD digit
+    movwf   LSD
+    retlw   0
+
+;-------------------------------------------------------------------------------
+LCDXY
+    movwf   temp_wr
+    rcall   i_write
+    return
 	
 ; -------------------------- Delay Routines ------------------------------------
 delay_1s                ;1 sec à 10Mhz instruction
@@ -348,13 +394,27 @@ menu_countdown
 
     
 subroutine_display
-    call    debounce_button1
-    movff   second,temp_wr
-    call    d_write
-    call    LCDLine_1
-    btfsc   BUTTON1
-    goto    subroutine_display
-    call    debounce_button1
+    call    debounce_button1	;wait for user to release the button
+    movf    second,w		;
+    call    bin_bcd		;transform the seconds value into BCD for LCD
+    movlw   TBL_DISPLAY_CLOCK	;
+    movwf   ptr_pos		;
+    call    stan_char_1		;display the static part of the first line
+    movlw   0x8F		;
+    call    LCDXY		;position the cursor at the right place
+    movff   LSD,temp_wr		;
+    call    d_write		;display the unities
+    movlw   0x8E		;
+    call    LCDXY		;position the cursor at the right place
+    movff   MsD,temp_wr		;
+    call    d_write		;display the tenths
+    movlw   0x8D		;
+    call    LCDXY		;position the cursor at the right place
+    movff   MSD,temp_wr		;
+    call    d_write		;display the hundreds
+    btfsc   BUTTON1		;
+    goto    subroutine_display	; if the button1 hasn't been pressed
+    call    debounce_button1	; otherwise
     goto    menu_display
     
 subroutine_settings
