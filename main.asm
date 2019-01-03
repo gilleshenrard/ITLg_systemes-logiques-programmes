@@ -480,13 +480,7 @@ subroutine_display_clock
     btfsc   BUTTON1		; if the button1 hasn't been pressed
     goto    subroutine_display_clock
     call    debounce_button1	; otherwise
-    goto    menu_display
-    
-subroutine_settings
-    call    debounce_button1
-    movlw   0x01
-    movwf   LED
-    goto    menu_settings
+    goto    main
     
 ;*******************************************************************************
 ;
