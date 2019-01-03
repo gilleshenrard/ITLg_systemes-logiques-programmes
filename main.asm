@@ -46,6 +46,8 @@ hour	    RES 1
 MSD	    RES 1
 MsD	    RES 1
 LSD	    RES 1
+is_AM	    RES 1
+tmp_am	    RES 1
 	    
 #define	LED		PORTD
 #define	TRIS_LED	TRISD
@@ -200,6 +202,8 @@ stan_table
     clrf    second	    ; set seconds to 0
     clrf    minute	    ; set minutes to 0
     clrf    hour	    ; set hours to 0
+    clrf    is_AM
+    clrf    tmp_am
     
     call    delay_1s	    ;
     call    delay_1s	    ; freeze for 5 seconds to display the name 
@@ -354,7 +358,20 @@ debounce_button2
     btfss   BUTTON2	    ;
     goto    $-2		    ; wait for user to release the button
     return
-
+	
+; ------------------------------------------------------------------------------
+; ---------------------- Time calculation routines -----------------------------
+AM_PM
+    movff    hour,tmp_am
+    btfss   is_AM,0	;test if AM flag is set
+    return
+    movlw   .11		;if set, check if hours > 12
+    cpfslt  hour
+    return
+    movf    .12,w	;if so, substract 12
+    subwf   tmp_am
+    movf    tmp_am,w	;place result in w
+    return
     
 ;*******************************************************************************
 ;
@@ -466,7 +483,7 @@ subroutine_display_clock
     movff   MsD,temp_wr		;
     call    d_write		;display the decades of seconds
     
-    movf    hour,w		;
+    call    AM_PM		;
     call    bin_bcd		;transform the seconds value into BCD for LCD
     movlw   0x89		;
     call    LCDXY		;position the cursor at the right place
@@ -477,6 +494,11 @@ subroutine_display_clock
     movff   MsD,temp_wr		;
     call    d_write		;display the decades of seconds
     
+    btfss   BUTTON2		; if the button1 hasn't been pressed
+    goto    display_clock_button1
+    call    debounce_button2	; toggle am flag, if button2 pushed
+    btg	    is_AM,0
+display_clock_button1
     btfsc   BUTTON1		; if the button1 hasn't been pressed
     goto    subroutine_display_clock
     call    debounce_button1	; otherwise
