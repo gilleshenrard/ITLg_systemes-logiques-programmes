@@ -552,12 +552,25 @@ subroutine_settings_clock
     btfsc   BUTTON2		; if the button1 hasn't been pressed
     goto    settings_clock_button1
     call    debounce_button2	; increment the current value selected (h/min)
-    btfsc   set_hour,0		;
-    incf    hour		;
     btfss   set_hour,0		;
-    incf    minute		;
+    goto    settings_inc_minute
+    incf    hour
+    movlw   .23			    ;
+    cpfsgt  hour		    ;
+    goto    settings_inc_minute	    ;
+    clrf    hour		    ; reset hours if == 24
+settings_inc_minute
+    btfsc   set_hour,0		;
+    goto    settings_clock_button1
+    incf    minute
+    movlw   .59			    ;
+    cpfsgt  minute		    ;
+    goto    settings_clock_button1  ;
+    clrf    minute		    ;
     
 settings_clock_button1
+    clrf    second
+    clrf    sec_tenth
     btfsc   BUTTON1		; if the button1 hasn't been pressed
     goto    subroutine_settings_clock
     call    debounce_button1	; otherwise
