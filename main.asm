@@ -367,12 +367,14 @@ AM_PM
     btfss   is_AM,0	;test if AM flag is set
     return
     movlw   .12		;if set, check if hours > 12
-    cpfslt  hour
-    return
-    movlw   0x00
     cpfsgt  hour
     return
-    movf    .12,0	;if so, substract 12
+    movlw   0x00
+    cpfseq  hour
+    goto    hour_not0
+    return
+hour_not0
+    movlw   .12		;if so, substract 12
     subwf   tmp_am
     movf    tmp_am,0	;place result in w
     return
