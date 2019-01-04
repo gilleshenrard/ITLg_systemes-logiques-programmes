@@ -49,6 +49,9 @@ LSD	    RES 1
 is_AM	    RES 1
 tmp_am	    RES 1
 set_hour    RES 1
+temp_btn1_1 RES 1
+temp_btn1_2 RES 1
+click_count RES 1
 	    
 #define	LED		PORTD
 #define	TRIS_LED	TRISD
@@ -205,6 +208,9 @@ stan_table
     clrf    tmp_am	    ; set temporary AM variable to 0
     clrf    set_hour	    ;
     bsf	    set_hour,0	    ; set the set_hour,0 to 0 by default
+    clrf    temp_btn1_1	    ; set the button1 tempo variable to 0
+    clrf    temp_btn1_2	    ; set the button1 tempo variable to 0
+    clrf    click_count
     
     call    delay_1s	    ;
     call    delay_1s	    ; freeze for 5 seconds to display the name 
@@ -364,20 +370,20 @@ debounce_button2
 ; ---------------------- Time calculation routines -----------------------------
 AM_PM
     movff    hour,tmp_am
-    btfss   is_AM,0	;test if AM flag is set
+    btfss   is_AM,0	    ;test if AM flag is set
     return
-    movlw   .11		;if set, check if hours > 12
-    cpfsgt  hour
-    goto    ampm_set_time
-    movlw   0x00
-    cpfseq  hour
-    goto    hour_not0
-    goto    ampm_set_time
-hour_not0
-    movlw   .12		;if so, substract 12
-    subwf   tmp_am
+    movlw   .11		    ;
+    cpfsgt  hour	    ; if set, check if hours > 11
+    goto    ampm_set_time   ; if not, go directly to the end
+    movlw   0x00	    ;
+    cpfseq  hour	    ;
+    goto    hour_not0	    ;
+    goto    ampm_set_time   ; if hours == 0, go to the end
+hour_not0   
+    movlw   .12		    ;
+    subwf   tmp_am	    ; if hours > 11, substract 12
 ampm_set_time
-    movf    tmp_am,0	;place result in w
+    movf    tmp_am,0	    ; place result in w
     return
     
 ;*******************************************************************************
@@ -389,65 +395,67 @@ ampm_set_time
 ; ---------------------------- Main menu options -------------------------------
 main
     movlw   TBL_MENU_DISPLAY; 
-    movwf   ptr_pos	    ;
-    call    stan_char_1	    ; send "Affichage" to the LCD line 1
-    movlw   TBL_MENU_CHOICE1; 
-    movwf   ptr_pos	    ;
-    call    stan_char_2	    ; send "S1:Sel    S2:Svt" to the LCD line 2
-    
+    movwf   ptr_pos		;
+    call    stan_char_1		; send "Affichage" to the LCD line 1
+    movlw   TBL_MENU_CHOICE1	; 
+    movwf   ptr_pos		;
+    call    stan_char_2		; send "S1:Sel    S2:Svt" to the LCD line 2
 menu_display
-    btfss   BUTTON1	    ; button1 pressed
+    btfss   BUTTON1		; button1 pressed
     goto    subroutine_display
     btfsc   BUTTON2
     goto    menu_display
     call    debounce_button2
 
-menu_settings_lcd    
+menu_settings_lcd		; take care of the "Clock setup" manu
     movlw   TBL_MENU_SETTINGS 
-    movwf   ptr_pos	    ;
-    call    stan_char_1	    ; send "Reglage Temps   " to the LCD line 1
-    movlw   TBL_MENU_CHOICE1; 
-    movwf   ptr_pos	    ;
-    call    stan_char_2	    ; send "S1:Sel    S2:Svt" to the LCD line 2
+    movwf   ptr_pos		;
+    call    stan_char_1		; send "Reglage Temps   " to the LCD line 1
+    movlw   TBL_MENU_CHOICE1	; 
+    movwf   ptr_pos		;
+    call    stan_char_2		; send "S1:Sel    S2:Svt" to the LCD line 2
 menu_settings
     btfss   BUTTON1
     goto    subroutine_settings
     btfsc   BUTTON2
     goto    menu_settings
     call    debounce_button2
-    
-    movlw   TBL_MENU_CHRONO; 
-    movwf   ptr_pos	    ;
-    call    stan_char_1	    ; send "Chronometre     " to the LCD line 1
-    movlw   TBL_MENU_CHOICE1; 
-    movwf   ptr_pos	    ;
-    call    stan_char_2	    ; send "S1:Sel    S2:Svt" to the LCD line 2
-menu_chrono
-    btfsc   BUTTON1
-    ;display menu is selected
-    btfsc   BUTTON2
-    goto    menu_chrono
-    call    debounce_button2
-    ;display menu is selected
-    
-    movlw   TBL_MENU_COUNTDOWN 
-    movwf   ptr_pos	    ;
-    call    stan_char_1	    ; send "Compte à rebours" to the LCD line 1
-    movlw   TBL_MENU_CHOICE1; 
-    movwf   ptr_pos	    ;
-    call    stan_char_2	    ; send "S1:Sel    S2:Svt" to the LCD line 2
-menu_countdown
-    btfsc   BUTTON1
-    ;display menu is selected
-    btfsc   BUTTON2
-    goto    menu_countdown
-    call    debounce_button2
-    ;display menu is selected
+
+;menu_chrono_lcd			; take care of the "Chrono" manu
+;    movlw   TBL_MENU_CHRONO; 
+;    movwf   ptr_pos		;
+;    call    stan_char_1		; send "Chronometre     " to the LCD line 1
+;    movlw   TBL_MENU_CHOICE1	; 
+;    movwf   ptr_pos		;
+;    call    stan_char_2		; send "S1:Sel    S2:Svt" to the LCD line 2
+;menu_chrono
+;    btfsc   BUTTON1
+;    ;display menu is selected
+;    btfsc   BUTTON2
+;    goto    menu_chrono
+;    call    debounce_button2
+;    ;display menu is selected
+;
+;menu_countdown_lcd	    	; take care of the "Countdown" manu
+;    movlw   TBL_MENU_COUNTDOWN 
+;    movwf   ptr_pos	    ;
+;    call    stan_char_1	    ; send "Compte à rebours" to the LCD line 1
+;    movlw   TBL_MENU_CHOICE1; 
+;    movwf   ptr_pos	    ;
+;    call    stan_char_2	    ; send "S1:Sel    S2:Svt" to the LCD line 2
+;menu_countdown
+;    btfsc   BUTTON1
+;    ;display menu is selected
+;    btfsc   BUTTON2
+;    goto    menu_countdown
+;    call    debounce_button2
+;    ;display menu is selected
     
     GOTO    main	    ; loop forever
 
 ; ------------------------------------------------------------------------------
 ; ---------------------------- Submenu routines --------------------------------
+
 ; TIME DISPLAY ROUTINE
 subroutine_display
     call    debounce_button1	;wait for user to release the button
@@ -514,6 +522,7 @@ display_clock_button1
     goto    main
     
 ; TIME SETUP ROUTINE
+
 subroutine_settings
     call    debounce_button1	;wait for user to release the button
     movlw   TBL_MENU_SET24	;
@@ -550,28 +559,28 @@ subroutine_settings_clock
     movff   MsD,temp_wr		;
     call    d_write		;display the decades of seconds
 
-    btfsc   BUTTON2		; if the button1 hasn't been pressed
+    btfsc   BUTTON2		; if the button1 has been pressed
     goto    settings_clock_button1
-    call    debounce_button2	; increment the current value selected (h/min)
-    btfss   set_hour,0		;
-    goto    settings_inc_minute
+    call    debounce_button2	; wait for a user input
+    clrf    second		;
+    clrf    sec_tenth		;
+    btfss   set_hour,0		; if hours are to be incremented (<> minutes)
+    goto    settings_inc_minute	
     incf    hour
-    movlw   .23			    ;
-    cpfsgt  hour		    ;
-    goto    settings_inc_minute	    ;
-    clrf    hour		    ; reset hours if == 24
+    movlw   .23			;
+    cpfsgt  hour		;
+    goto    settings_inc_minute	;
+    clrf    hour		; reset hours if == 24
 settings_inc_minute
     btfsc   set_hour,0		;
     goto    settings_clock_button1
     incf    minute
-    movlw   .59			    ;
-    cpfsgt  minute		    ;
-    goto    settings_clock_button1  ;
-    clrf    minute		    ;
+    movlw   .59			;
+    cpfsgt  minute		;
+    goto    settings_clock_button1
+    clrf    minute		; reset hours if == 60
     
-settings_clock_button1
-    clrf    second
-    clrf    sec_tenth
+settings_clock_button1    
     btfsc   BUTTON1		; if the button1 hasn't been pressed
     goto    subroutine_settings_clock
     call    debounce_button1	; otherwise
