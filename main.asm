@@ -205,8 +205,6 @@ stan_table
     clrf    tmp_am	    ; set temporary AM variable to 0
     clrf    set_hour	    ;
     bsf	    set_hour,0	    ; set the set_hour,0 to 0 by default
-    movlw   .13
-    movwf   hour
     
     call    delay_1s	    ;
     call    delay_1s	    ; freeze for 5 seconds to display the name 
