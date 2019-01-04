@@ -51,6 +51,7 @@ tmp_am	    RES 1
 set_hour    RES 1
 temp_btn1_1 RES 1
 temp_btn1_2 RES 1
+long_clk    RES 1
 	    
 #define	LED		PORTD
 #define	TRIS_LED	TRISD
@@ -210,6 +211,7 @@ stan_table
     bsf	    set_hour,0	    ; set the set_hour,0 to 0 by default
     clrf    temp_btn1_1	    ; set the button1 tempo variable to 0
     clrf    temp_btn1_2	    ; set the button1 tempo variable to 0
+    clrf    long_clk
     
     call    delay_1s	    ;
     call    delay_1s	    ; freeze for 5 seconds to display the name 
@@ -354,15 +356,37 @@ d100l1
     decfsz  temp_2,F
     bra	d100l1
     return
- 
+
+; ------------------------------------------------------------------------------
+; --------------------------- Button Routines ----------------------------------
 debounce_button1
+    movff   sec_tenth,temp_btn1_1   ; otherwise, save time at button1 down
     btfss   BUTTON1	    ;
     goto    $-2		    ; wait for user to release the button
+    movff   sec_tenth,temp_btn1_2   ; save time at button1 up
+    movf    temp_btn1_1,0	    ;
+    subwf   temp_btn1_2		    ; compute time delta
+    clrf    long_clk		    ; prepare the variable
+    movlw   LONG_CLICK_TIME	    ;
+    cpfsgt  temp_btn1_2		    ; compare to long click time
+    return
+    movlw   0x01
+    movwf   long_clk
     return
  
 debounce_button2
+    movff   sec_tenth,temp_btn1_1   ; otherwise, save time at button1 down
     btfss   BUTTON2	    ;
     goto    $-2		    ; wait for user to release the button
+    movff   sec_tenth,temp_btn1_2   ; save time at button1 up
+    movf    temp_btn1_1,0	    ;
+    subwf   temp_btn1_2		    ; compute time delta
+    clrf    long_clk		    ; prepare the variable
+    movlw   LONG_CLICK_TIME	    ;
+    cpfsgt  temp_btn1_2		    ; compare to long click time
+    return
+    movlw   0x01
+    movwf   long_clk
     return
 	
 ; ------------------------------------------------------------------------------
@@ -584,13 +608,8 @@ settings_inc_minute
 settings_clock_button1    
     btfsc   BUTTON1		    ; if the button1 hasn't been pressed
     goto    subroutine_settings_clock
-    movff   sec_tenth,temp_btn1_1   ; otherwise, save time at button1 down
     call    debounce_button1	    ; wait for user to release the button
-    movff   sec_tenth,temp_btn1_2   ; save time at button1 up
-    movf    temp_btn1_1,0	    ;
-    subwf   temp_btn1_2		    ; compute time delta
-    movlw   LONG_CLICK_TIME	    ;
-    cpfsgt  temp_btn1_2		    ; compare to long click time
+    btfss   long_clk,0		    ; verify if long click
     goto    menu_settings_lcd
     btg	    set_hour,0		    ; toggle setting to change
     goto    subroutine_settings_clock
