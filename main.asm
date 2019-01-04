@@ -51,7 +51,6 @@ tmp_am	    RES 1
 set_hour    RES 1
 temp_btn1_1 RES 1
 temp_btn1_2 RES 1
-click_count RES 1
 	    
 #define	LED		PORTD
 #define	TRIS_LED	TRISD
@@ -60,6 +59,7 @@ click_count RES 1
 #define	BUTTON2		PORTA,5
 #define	TRIS_BUTTON2	TRISA,5
 #define	INT_TMR		INTCON,TMR0IF
+#define	LONG_CLICK_TIME	0x04
 
 ;*******************************************************************************
 ;
@@ -210,7 +210,6 @@ stan_table
     bsf	    set_hour,0	    ; set the set_hour,0 to 0 by default
     clrf    temp_btn1_1	    ; set the button1 tempo variable to 0
     clrf    temp_btn1_2	    ; set the button1 tempo variable to 0
-    clrf    click_count
     
     call    delay_1s	    ;
     call    delay_1s	    ; freeze for 5 seconds to display the name 
@@ -536,6 +535,8 @@ subroutine_settings
     movlw   0x3A		;
     movwf   temp_wr		;
     call    d_write		;display ':'
+    bsf	    set_hour,0		;reset hour setup by default
+    
 subroutine_settings_clock
     movf    minute,w		;
     call    bin_bcd		;transform the seconds value into BCD for LCD
@@ -581,10 +582,18 @@ settings_inc_minute
     clrf    minute		; reset hours if == 60
     
 settings_clock_button1    
-    btfsc   BUTTON1		; if the button1 hasn't been pressed
+    btfsc   BUTTON1		    ; if the button1 hasn't been pressed
     goto    subroutine_settings_clock
-    call    debounce_button1	; otherwise
+    movff   sec_tenth,temp_btn1_1   ; otherwise, save time at button1 down
+    call    debounce_button1	    ; wait for user to release the button
+    movff   sec_tenth,temp_btn1_2   ; save time at button1 up
+    movf    temp_btn1_1,0	    ;
+    subwf   temp_btn1_2		    ; compute time delta
+    movlw   LONG_CLICK_TIME	    ;
+    cpfsgt  temp_btn1_2		    ; compare to long click time
     goto    menu_settings_lcd
+    btg	    set_hour,0		    ; toggle setting to change
+    goto    subroutine_settings_clock
     
 ;*******************************************************************************
 ;
