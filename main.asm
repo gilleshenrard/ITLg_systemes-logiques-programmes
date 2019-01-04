@@ -48,6 +48,7 @@ MsD	    RES 1
 LSD	    RES 1
 is_AM	    RES 1
 tmp_am	    RES 1
+set_hour    RES 1
 	    
 #define	LED		PORTD
 #define	TRIS_LED	TRISD
@@ -200,8 +201,12 @@ stan_table
     clrf    second	    ; set seconds to 0
     clrf    minute	    ; set minutes to 0
     clrf    hour	    ; set hours to 0
-    clrf    is_AM
-    clrf    tmp_am
+    clrf    is_AM	    ; set AM/PM flag to PM (0)
+    clrf    tmp_am	    ; set temporary AM variable to 0
+    clrf    set_hour	    ;
+    bsf	    set_hour,0	    ; set the set_hour,0 to 0 by default
+    movlw   .13
+    movwf   hour
     
     call    delay_1s	    ;
     call    delay_1s	    ; freeze for 5 seconds to display the name 
@@ -363,12 +368,15 @@ AM_PM
     movff    hour,tmp_am
     btfss   is_AM,0	;test if AM flag is set
     return
-    movlw   .11		;if set, check if hours > 12
+    movlw   .12		;if set, check if hours > 12
     cpfslt  hour
     return
-    movf    .12,w	;if so, substract 12
+    movlw   0x00
+    cpfsgt  hour
+    return
+    movf    .12,0	;if so, substract 12
     subwf   tmp_am
-    movf    tmp_am,w	;place result in w
+    movf    tmp_am,0	;place result in w
     return
     
 ;*******************************************************************************
@@ -482,6 +490,7 @@ subroutine_display_clock
     movff   MsD,temp_wr		;
     call    d_write		;display the decades of seconds
     
+    movf    hour,0
     call    AM_PM		;
     call    bin_bcd		;transform the seconds value into BCD for LCD
     movlw   0x89		;
@@ -493,7 +502,7 @@ subroutine_display_clock
     movff   MsD,temp_wr		;
     call    d_write		;display the decades of seconds
     
-    btfss   BUTTON2		; if the button1 hasn't been pressed
+    btfsc   BUTTON2		; if the button1 hasn't been pressed
     goto    display_clock_button1
     call    debounce_button2	; toggle am flag, if button2 pushed
     btg	    is_AM,0
@@ -512,7 +521,43 @@ subroutine_settings
     movlw   TBL_MENU_CHOICE24
     movwf   ptr_pos		;
     call    stan_char_2		;display the second part of the line
+    movlw   0x8D		;
+    call    LCDXY		;position the cursor at the right place
+    movlw   0x3A		;
+    movwf   temp_wr		;
+    call    d_write		;display ':'
 subroutine_settings_clock
+    movf    minute,w		;
+    call    bin_bcd		;transform the seconds value into BCD for LCD
+    movlw   0x8F		;
+    call    LCDXY		;position the cursor at the right place
+    movff   LSD,temp_wr		;
+    call    d_write		;display the unities of seconds
+    movlw   0x8E		;
+    call    LCDXY		;position the cursor at the right place
+    movff   MsD,temp_wr		;
+    call    d_write		;display the decades of seconds
+    
+    movf    hour,w		;
+    call    bin_bcd		;transform the seconds value into BCD for LCD
+    movlw   0x8C		;
+    call    LCDXY		;position the cursor at the right place
+    movff   LSD,temp_wr		;
+    call    d_write		;display the unities of seconds
+    movlw   0x8B		;
+    call    LCDXY		;position the cursor at the right place
+    movff   MsD,temp_wr		;
+    call    d_write		;display the decades of seconds
+
+    btfsc   BUTTON2		; if the button1 hasn't been pressed
+    goto    settings_clock_button1
+    call    debounce_button2	; increment the current value selected (h/min)
+    btfsc   set_hour,0		;
+    incf    hour		;
+    btfss   set_hour,0		;
+    incf    minute		;
+    
+settings_clock_button1
     btfsc   BUTTON1		; if the button1 hasn't been pressed
     goto    subroutine_settings_clock
     call    debounce_button1	; otherwise
