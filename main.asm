@@ -52,6 +52,9 @@ set_hour    RES 1
 temp_btn1_1 RES 1
 temp_btn1_2 RES 1
 long_clk    RES 1
+chrono_min  RES 1
+chrono_sec  RES 1
+chrono_on   RES 1
 	    
 #define	LED		PORTD
 #define	TRIS_LED	TRISD
@@ -166,6 +169,10 @@ stan_table
     data    "Regler a        "
 #define	TBL_MENU_CHOICE24	.160
     data    "S1:Svt/Sor S2:++"
+#define	TBL_MENU_SETCHRONO	.176
+    data    "Chrono :        "
+#define	TBL_MENU_CHOICE_CHRONO	.192
+    data    "S1:Sor S2:ON/OFF"
 
 ; -------------------------- Actual initialisation -----------------------------
     clrf    TRIS_LED	    ;
@@ -212,6 +219,9 @@ stan_table
     clrf    temp_btn1_1	    ; set the button1 tempo variable to 0
     clrf    temp_btn1_2	    ; set the button1 tempo variable to 0
     clrf    long_clk
+    clrf    chrono_min
+    clrf    chrono_sec
+    clrf    chrono_on
     
     call    delay_1s	    ;
     call    delay_1s	    ; freeze for 5 seconds to display the name 
@@ -444,21 +454,20 @@ menu_settings
     goto    menu_settings
     call    debounce_button2
 
-;menu_chrono_lcd			; take care of the "Chrono" manu
-;    movlw   TBL_MENU_CHRONO; 
-;    movwf   ptr_pos		;
-;    call    stan_char_1		; send "Chronometre     " to the LCD line 1
-;    movlw   TBL_MENU_CHOICE1	; 
-;    movwf   ptr_pos		;
-;    call    stan_char_2		; send "S1:Sel    S2:Svt" to the LCD line 2
-;menu_chrono
-;    btfsc   BUTTON1
-;    ;display menu is selected
-;    btfsc   BUTTON2
-;    goto    menu_chrono
-;    call    debounce_button2
-;    ;display menu is selected
-;
+menu_chrono_lcd			; take care of the "Chrono" manu
+    movlw   TBL_MENU_CHRONO; 
+    movwf   ptr_pos		;
+    call    stan_char_1		; send "Chronometre     " to the LCD line 1
+    movlw   TBL_MENU_CHOICE1	; 
+    movwf   ptr_pos		;
+    call    stan_char_2		; send "S1:Sel    S2:Svt" to the LCD line 2
+menu_chrono
+    btfss   BUTTON1
+    goto    subroutine_chrono
+    btfsc   BUTTON2
+    goto    menu_chrono
+    call    debounce_button2
+
 ;menu_countdown_lcd	    	; take care of the "Countdown" manu
 ;    movlw   TBL_MENU_COUNTDOWN 
 ;    movwf   ptr_pos	    ;
@@ -614,6 +623,55 @@ settings_clock_button1
     btg	    set_hour,0		    ; toggle setting to change
     goto    subroutine_settings_clock
     
+; CHRONO ROUTINE
+
+subroutine_chrono
+    call    debounce_button1	;wait for user to release the button
+    movlw   TBL_MENU_SETCHRONO	;
+    movwf   ptr_pos		;
+    call    stan_char_1		;display the static part of the first line
+    movlw   TBL_MENU_CHOICE_CHRONO
+    movwf   ptr_pos		;
+    call    stan_char_2		;display the second part of the line
+    movlw   0x8D		;
+    call    LCDXY		;position the cursor at the right place
+    movlw   0x3A		;
+    movwf   temp_wr		;
+    call    d_write		;display ':'
+
+subroutine_chrono_clock
+    movf    chrono_sec,w	;
+    call    bin_bcd		;transform the seconds value into BCD for LCD
+    movlw   0x8F		;
+    call    LCDXY		;position the cursor at the right place
+    movff   LSD,temp_wr		;
+    call    d_write		;display the unities of seconds
+    movlw   0x8E		;
+    call    LCDXY		;position the cursor at the right place
+    movff   MsD,temp_wr		;
+    call    d_write		;display the decades of seconds
+    
+    movf    chrono_min,w	;
+    call    bin_bcd		;transform the seconds value into BCD for LCD
+    movlw   0x8C		;
+    call    LCDXY		;position the cursor at the right place
+    movff   LSD,temp_wr		;
+    call    d_write		;display the unities of minutes
+    movlw   0x8B		;
+    call    LCDXY		;position the cursor at the right place
+    movff   MsD,temp_wr		;
+    call    d_write		;display the decades of minutes
+    
+    btfsc   BUTTON2		; if the button2 hasn't been pressed
+    goto    chrono_clock_button1
+    call    debounce_button2	; wait for user to release the button
+    ; TO DO button2 behaviour
+chrono_clock_button1
+    btfsc   BUTTON1		; if the button1 hasn't been pressed
+    goto    subroutine_chrono_clock
+    call    debounce_button1	; otherwise
+    ; TO DO button1 behaviour
+    goto    menu_chrono_lcd
 ;*******************************************************************************
 ;
 ; END OF PROGRAM
