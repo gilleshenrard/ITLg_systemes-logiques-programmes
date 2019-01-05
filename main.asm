@@ -55,6 +55,7 @@ long_clk    RES 1
 chrono_min  RES 1
 chrono_sec  RES 1
 chrono_on   RES 1
+time_carry  RES 1
 	    
 #define	LED		PORTD
 #define	TRIS_LED	TRISD
@@ -115,20 +116,13 @@ HighInterrupt
     goto    int_end		    ;
     clrf    sec_tenth		    ;
     incf    second		    ; increment seconds if tenths == 10
-    movlw   .59			    ;
-    cpfsgt  second		    ;
-    goto    int_end		    ;
-    clrf    second		    ;
-    incf    minute		    ; increment minutes if seconds == 60
-    movlw   .59			    ;
-    cpfsgt  minute		    ;
-    goto    int_end		    ;
-    clrf    minute		    ;
-    incf    hour		    ; increment hours if minutes == 60
-    movlw   .23			    ;
-    cpfsgt  hour		    ;
-    goto    int_end		    ;
-    clrf    hour		    ; reset hours if == 24
+    call    compute_sec		    ;
+    btfsc   time_carry,0	    ;
+    incf    minute		    ; 
+    call    compute_min		    ; compute minutes out of seconds
+    btfsc   time_carry,0	    ;
+    incf    hour		    ;
+    call    compute_hour	    ; compute hours out of minutes
 
 int_end
     movff   bsr_temp, BSR	    ;restore bsr
@@ -419,6 +413,33 @@ ampm_set_time
     movf    tmp_am,0	    ; place result in w
     return
     
+compute_sec
+    bcf	    time_carry,0    ; reset time carry flag
+    movlw   .59		    ;
+    cpfsgt  second	    ; check if second = 60
+    return		    ; if not, return
+    clrf    second	    ;
+    bsf	    time_carry,0    ; if so, clear second and set carry flag
+    return
+    
+compute_min
+    bcf	    time_carry,0    ; reset time carry flag
+    movlw   .59		    ;
+    cpfsgt  minute	    ; check if minute = 60
+    return		    ; if not, return
+    clrf    minute	    ;
+    bsf	    time_carry,0    ; if so, clear minute and set carry flag
+    return
+    
+compute_hour
+    bcf	    time_carry,0    ; reset time carry flag
+    movlw   .23		    ;
+    cpfsgt  hour	    ; check if hour = 24
+    return		    ; if not, return
+    clrf    hour	    ;
+    bsf	    time_carry,0    ; if so, clear hour and set carry flag
+    return
+    
 ;*******************************************************************************
 ;
 ; MAIN LOOP
@@ -601,18 +622,12 @@ subroutine_settings_clock
     btfss   set_hour,0		; if hours are to be incremented (<> minutes)
     goto    settings_inc_minute	
     incf    hour
-    movlw   .23			;
-    cpfsgt  hour		;
-    goto    settings_inc_minute	;
-    clrf    hour		; reset hours if == 24
+    call    compute_hour
 settings_inc_minute
     btfsc   set_hour,0		;
     goto    settings_clock_button1
     incf    minute
-    movlw   .59			;
-    cpfsgt  minute		;
-    goto    settings_clock_button1
-    clrf    minute		; reset hours if == 60
+    call    compute_min
     
 settings_clock_button1    
     btfsc   BUTTON1		    ; if the button1 hasn't been pressed
