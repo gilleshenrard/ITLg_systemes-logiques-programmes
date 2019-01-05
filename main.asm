@@ -46,16 +46,12 @@ hour	    RES 1
 MSD	    RES 1
 MsD	    RES 1
 LSD	    RES 1
-is_AM	    RES 1
 tmp_am	    RES 1
-set_hour    RES 1
-temp_btn1_1 RES 1
-temp_btn1_2 RES 1
-long_clk    RES 1
+temp_btn_1  RES 1
+temp_btn_2  RES 1
 chrono_min  RES 1
 chrono_sec  RES 1
-chrono_on   RES 1
-time_carry  RES 1
+time_flags  RES 1
 	    
 #define	LED		PORTD
 #define	TRIS_LED	TRISD
@@ -64,7 +60,12 @@ time_carry  RES 1
 #define	BUTTON2		PORTA,5
 #define	TRIS_BUTTON2	TRISA,5
 #define	INT_TMR		INTCON,TMR0IF
-#define	LONG_CLICK_TIME	0x04
+#define	LONG_CLICK_TIME	0x05
+#define	IS_AM		time_flags,0
+#define	SET_HOUR	time_flags,1
+#define	LG_CLICK	time_flags,2
+#define	TIME_CY		time_flags,3
+#define	CHRONO_ON	time_flags,4
 
 ;*******************************************************************************
 ;
@@ -117,10 +118,10 @@ HighInterrupt
     clrf    sec_tenth		    ;
     incf    second		    ; increment seconds if tenths == 10
     call    compute_sec		    ;
-    btfsc   time_carry,0	    ;
+    btfsc   TIME_CY		    ;
     incf    minute		    ; 
     call    compute_min		    ; compute minutes out of seconds
-    btfsc   time_carry,0	    ;
+    btfsc   TIME_CY		    ;
     incf    hour		    ;
     call    compute_hour	    ; compute hours out of minutes
 
@@ -206,19 +207,16 @@ stan_table
     clrf    second	    ; set seconds to 0
     clrf    minute	    ; set minutes to 0
     clrf    hour	    ; set hours to 0
-    clrf    is_AM	    ; set AM/PM flag to PM (0)
     clrf    tmp_am	    ; set temporary AM variable to 0
-    clrf    set_hour	    ;
-    bsf	    set_hour,0	    ; set the set_hour,0 to 0 by default
-    clrf    temp_btn1_1	    ; set the button1 tempo variable to 0
-    clrf    temp_btn1_2	    ; set the button1 tempo variable to 0
-    clrf    long_clk
-    clrf    chrono_min
-    clrf    chrono_sec
-    clrf    chrono_on
+    clrf    time_flags	    ; set all flags to 0
+    bsf	    SET_HOUR	    ; set hour setup instead of min setup
+    clrf    temp_btn_1	    ; set the button1 tempo variable to 0
+    clrf    temp_btn_2	    ; set the button1 tempo variable to 0
+    clrf    chrono_min	    ;
+    clrf    chrono_sec	    ; clear chrono variables
     
     call    delay_1s	    ;
-    call    delay_1s	    ; freeze for 5 seconds to display the name 
+    call    delay_1s	    ; freeze for 2 seconds to display the name 
     
     goto    main
 
@@ -363,41 +361,39 @@ d100l1
 
 ; ------------------------------------------------------------------------------
 ; --------------------------- Button Routines ----------------------------------
+; CAUTION : possibility of issues if long click > 1s
+; it was easier to implement that way ;)
 debounce_button1
-    movff   sec_tenth,temp_btn1_1   ; otherwise, save time at button1 down
-    btfss   BUTTON1	    ;
-    goto    $-2		    ; wait for user to release the button
-    movff   sec_tenth,temp_btn1_2   ; save time at button1 up
-    movf    temp_btn1_1,0	    ;
-    subwf   temp_btn1_2		    ; compute time delta
-    clrf    long_clk		    ; prepare the variable
+    movff   sec_tenth,temp_btn_1    ; otherwise, save time at button1 down
+    btfss   BUTTON1		    ;
+    goto    $-2			    ; wait for user to release the button
+    movff   sec_tenth,temp_btn_2    ; save time at button1 up
+    movf    temp_btn_1,0	    ;
+    subwf   temp_btn_2		    ; compute time delta
+    bcf	    LG_CLICK		    ; prepare the variable
     movlw   LONG_CLICK_TIME	    ;
-    cpfsgt  temp_btn1_2		    ; compare to long click time
-    return
-    movlw   0x01
-    movwf   long_clk
+    cpfslt  temp_btn_2		    ; compare to long click time
+    bsf	    LG_CLICK
     return
  
 debounce_button2
-    movff   sec_tenth,temp_btn1_1   ; otherwise, save time at button1 down
-    btfss   BUTTON2	    ;
-    goto    $-2		    ; wait for user to release the button
-    movff   sec_tenth,temp_btn1_2   ; save time at button1 up
-    movf    temp_btn1_1,0	    ;
-    subwf   temp_btn1_2		    ; compute time delta
-    clrf    long_clk		    ; prepare the variable
+    movff   sec_tenth,temp_btn_1    ; otherwise, save time at button1 down
+    btfss   BUTTON2		    ;
+    goto    $-2			    ; wait for user to release the button
+    movff   sec_tenth,temp_btn_2    ; save time at button1 up
+    movf    temp_btn_1,0	    ;
+    subwf   temp_btn_2		    ; compute time delta
+    bcf	    LG_CLICK		    ; prepare the variable
     movlw   LONG_CLICK_TIME	    ;
-    cpfsgt  temp_btn1_2		    ; compare to long click time
-    return
-    movlw   0x01
-    movwf   long_clk
+    cpfslt  temp_btn_2		    ; compare to long click time
+    bsf	    LG_CLICK
     return
 	
 ; ------------------------------------------------------------------------------
 ; ---------------------- Time calculation routines -----------------------------
 AM_PM
-    movff    hour,tmp_am
-    btfss   is_AM,0	    ;test if AM flag is set
+    movff   hour,tmp_am
+    btfss   IS_AM	    ;test if AM flag is set
     return
     movlw   .11		    ;
     cpfsgt  hour	    ; if set, check if hours > 11
@@ -414,30 +410,30 @@ ampm_set_time
     return
     
 compute_sec
-    bcf	    time_carry,0    ; reset time carry flag
+    bcf	    TIME_CY	    ; reset time carry flag
     movlw   .59		    ;
     cpfsgt  second	    ; check if second = 60
     return		    ; if not, return
     clrf    second	    ;
-    bsf	    time_carry,0    ; if so, clear second and set carry flag
+    bsf	    TIME_CY	    ; if so, clear second and set carry flag
     return
     
 compute_min
-    bcf	    time_carry,0    ; reset time carry flag
+    bcf	    TIME_CY	    ; reset time carry flag
     movlw   .59		    ;
     cpfsgt  minute	    ; check if minute = 60
     return		    ; if not, return
     clrf    minute	    ;
-    bsf	    time_carry,0    ; if so, clear minute and set carry flag
+    bsf	    TIME_CY	    ; if so, clear minute and set carry flag
     return
     
 compute_hour
-    bcf	    time_carry,0    ; reset time carry flag
+    bcf	    TIME_CY	    ; reset time carry flag
     movlw   .23		    ;
     cpfsgt  hour	    ; check if hour = 24
     return		    ; if not, return
     clrf    hour	    ;
-    bsf	    time_carry,0    ; if so, clear hour and set carry flag
+    bsf	    TIME_CY	    ; if so, clear hour and set carry flag
     return
     
 ;*******************************************************************************
@@ -567,7 +563,7 @@ subroutine_display_clock
     btfsc   BUTTON2		; if the button1 hasn't been pressed
     goto    display_clock_button1
     call    debounce_button2	; toggle am flag, if button2 pushed
-    btg	    is_AM,0
+    btg	    IS_AM
 display_clock_button1
     btfsc   BUTTON1		; if the button1 hasn't been pressed
     goto    subroutine_display_clock
@@ -589,7 +585,7 @@ subroutine_settings
     movlw   0x3A		;
     movwf   temp_wr		;
     call    d_write		;display ':'
-    bsf	    set_hour,0		;reset hour setup by default
+    bsf	    SET_HOUR		;reset hour setup by default
     
 subroutine_settings_clock
     movf    minute,w		;
@@ -619,12 +615,12 @@ subroutine_settings_clock
     call    debounce_button2	; wait for a user input
     clrf    second		;
     clrf    sec_tenth		;
-    btfss   set_hour,0		; if hours are to be incremented (<> minutes)
+    btfss   SET_HOUR		; if hours are to be incremented (<> minutes)
     goto    settings_inc_minute	
     incf    hour
     call    compute_hour
 settings_inc_minute
-    btfsc   set_hour,0		;
+    btfsc   SET_HOUR		;
     goto    settings_clock_button1
     incf    minute
     call    compute_min
@@ -633,9 +629,9 @@ settings_clock_button1
     btfsc   BUTTON1		    ; if the button1 hasn't been pressed
     goto    subroutine_settings_clock
     call    debounce_button1	    ; wait for user to release the button
-    btfss   long_clk,0		    ; verify if long click
+    btfss   LG_CLICK		    ; verify if long click
     goto    menu_settings_lcd
-    btg	    set_hour,0		    ; toggle setting to change
+    btg	    SET_HOUR		    ; toggle setting to change
     goto    subroutine_settings_clock
     
 ; CHRONO ROUTINE
