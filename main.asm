@@ -99,16 +99,18 @@ HighInterrupt
     movwf   w_temp		    ;save w (1 cycle)
     movff   STATUS, status_temp	    ;save status (2 cycles)
     movff   BSR, bsr_temp	    ;save bsr (2 cycles)
-    movff   time_flags,flags_tmp   ;save custom flags
+    movff   time_flags,flags_tmp   ;save custom flags (2 cycles)
     
     bcf	    T0CON,7		    ; stop the timer0 (1 cycle)
     bcf	    INT_TMR		    ;clear interrupt flag (1 cycle)
-    ; 45551 (65535 - 20000 + 16)
+    ; 45553 (65535 - 20000 + 18)
     movlw   b'10110001'		    ; (1 cycle)
     movwf   TMR0H   		    ;restore timer H value (1 cycle)
-    movlw   b'11101111'		    ; (1 cycle)
+    movlw   b'11110001'		    ; (1 cycle)
     movwf   TMR0L		    ;restore timer L value (1 cycle)
     bsf	    T0CON,7		    ; start the timer0 (1 cycle)
+    
+    ; REGULAR TIME
     
     incf    tick		    ; increment the time tick
     movlw   0x32		    ;
@@ -121,14 +123,21 @@ HighInterrupt
     cpfsgt  sec_tenth		    ; check if more than 0.9s
     goto    int_end		    ; if not, continue
     clrf    sec_tenth		    ;
+    
     incf    second		    ; otherwise, increment second
     call    compute_sec		    ;
-    btfsc   TIME_CY		    ;
+    btfss   TIME_CY		    ;
+    goto    int_end
+    
     incf    minute		    ; 
     call    compute_min		    ; compute minutes out of seconds
-    btfsc   TIME_CY		    ;
+    btfss   TIME_CY		    ;
+    goto    int_end
+    
     incf    hour		    ;
     call    compute_hour	    ; compute hours out of minutes
+    
+    ; CHRONO TIME
     
     btfss   CHRONO_ON
     goto    int_end
@@ -143,14 +152,21 @@ HighInterrupt
     cpfsgt  chrono_ten		    ; check if more than 0.9s
     goto    int_end		    ; if not, continue
     clrf    chrono_ten		    ;
+    
     incf    chrono_sec		    ; otherwise, increment second
     movff   second,time_tmp	    ; save second state variable
-    call    compute_sec		    ;
+    movff   chrono_sec,second	    ; put chrono second into second variable
+    call    compute_sec		    ; compute incrementation
+    movff   second,chrono_sec	    ; restore chrono second variable
     movff   time_tmp,second	    ; restore second state variable
-    btfsc   TIME_CY		    ;
+
+    btfss   TIME_CY		    ;
+    goto    int_end
     incf    chrono_min		    ;
     movff   minute,time_tmp	    ; save minute state variable
+    movff   chrono_min,minute	    ; put chrono minute into minute variable
     call    compute_min		    ; compute minutes out of seconds
+    movff   minute,chrono_min	    ; restore chrono minute variable
     movff   time_tmp,minute	    ; restore minute state variable
 
 int_end
@@ -241,8 +257,11 @@ stan_table
     bsf	    SET_HOUR	    ; set hour setup instead of min setup
     clrf    temp_btn_1	    ; set the button1 tempo variable to 0
     clrf    temp_btn_2	    ; set the button1 tempo variable to 0
+    clrf    chrono_tick
+    clrf    chrono_ten
     clrf    chrono_min	    ;
     clrf    chrono_sec	    ; clear chrono variables
+    clrf    LED
     
     call    delay_1s	    ;
     call    delay_1s	    ; freeze for 2 seconds to display the name 
@@ -706,6 +725,9 @@ subroutine_chrono_clock
     goto    chrono_clock_button1
     call    debounce_button2	; wait for user to release the button
     btg	    CHRONO_ON
+    btfss   CHRONO_ON
+    bcf	    LED,0
+    bsf	    LED,0
 chrono_clock_button1
     btfsc   BUTTON1		; if the button1 hasn't been pressed
     goto    subroutine_chrono_clock
