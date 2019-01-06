@@ -63,6 +63,8 @@ cd_sec	    RES 1
 time_flags  RES 1
 	    
 #define	LED		PORTD
+#define	CHRONO_LED	PORTD,0
+#define	CD_LED		PORTD,1
 #define	TRIS_LED	TRISD
 #define	BUTTON1		PORTB,0
 #define	TRIS_BUTTON1	TRISB,0
@@ -77,8 +79,6 @@ time_flags  RES 1
 #define	CHRONO_ON	time_flags,4
 #define	CD_ON		time_flags,5
 #define	SET_MIN		time_flags,6
-#define	CHRONO_LED	LED,0
-#define	CD_LED		LED,1
 
 ;*******************************************************************************
 ;
