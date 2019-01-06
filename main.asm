@@ -78,7 +78,7 @@ time_flags  RES 1
 #define	CD_ON		time_flags,5
 #define	SET_MIN		time_flags,6
 #define	CHRONO_LED	LED,0
-#define	CD_LED	LED,1
+#define	CD_LED		LED,1
 
 ;*******************************************************************************
 ;
@@ -321,8 +321,12 @@ stan_table
     clrf    cd_min	    ;
     clrf    cd_sec	    ; clear chrono variables
     
+    bsf	    LED,7
+    bsf	    LED,6
     call    delay_1s	    ;
+    bcf	    LED,7
     call    delay_1s	    ; freeze for 2 seconds to display the name 
+    bcf	    LED,6
     
     goto    main
 
@@ -850,13 +854,13 @@ subroutine_countdown_clock
     btfsc   SET_MIN
     goto    cd_set_min
     incf    cd_sec
-    movlw   .59
+    movlw   .60
     cpfslt  cd_sec
     clrf    cd_sec
     goto    cd_clock_button1
 cd_set_min
     incf    cd_min
-    movlw   .59
+    movlw   .60
     cpfslt  cd_min
     clrf    cd_min
     goto    cd_clock_button1
