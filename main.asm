@@ -51,10 +51,15 @@ tmp_am	    RES 1
 temp_btn_1  RES 1
 temp_btn_2  RES 1
 time_tmp    RES 1
+time_tmp2   RES 1
 chrono_tick RES 1
 chrono_ten  RES 1
 chrono_min  RES 1
 chrono_sec  RES 1
+cd_tick	    RES 1
+cd_ten	    RES 1
+cd_min	    RES 1
+cd_sec	    RES 1
 time_flags  RES 1
 	    
 #define	LED		PORTD
@@ -70,6 +75,10 @@ time_flags  RES 1
 #define	LG_CLICK	time_flags,2
 #define	TIME_CY		time_flags,3
 #define	CHRONO_ON	time_flags,4
+#define	CD_ON		time_flags,5
+#define	SET_MIN		time_flags,6
+#define	CHRONO_LED	LED,0
+#define	CD_LED	LED,1
 
 ;*******************************************************************************
 ;
@@ -121,7 +130,7 @@ HighInterrupt
     incf    sec_tenth		    ; increment 1/10 sec counter
     movlw   .9			    ;
     cpfsgt  sec_tenth		    ; check if more than 0.9s
-    goto    chrono_interrupt		    ; if not, continue
+    goto    chrono_interrupt	    ; if not, continue
     clrf    sec_tenth		    ;
     
     incf    second		    ; otherwise, increment second
@@ -141,17 +150,17 @@ HighInterrupt
     
 chrono_interrupt
     btfss   CHRONO_ON
-    goto    int_end
-    incf    chrono_tick		    ; increment the chrono tick
+    goto    countdown_interrupt
+    incf    chrono_tick		    ; increment the time tick
     movlw   0x32		    ;
-    cpfseq  chrono_tick		    ; check if chrono tick == 50 (0.1 sec)
-    goto    int_end
+    cpfseq  chrono_tick		    ; check if tick == 50 (0.1 sec)
+    goto    countdown_interrupt
     
     clrf    chrono_tick		    ; reset the tick counter
     incf    chrono_ten		    ; increment 1/10 sec counter
     movlw   .9			    ;
     cpfsgt  chrono_ten		    ; check if more than 0.9s
-    goto    int_end		    ; if not, continue
+    goto    countdown_interrupt	    ; if not, continue
     clrf    chrono_ten		    ;
     
     incf    chrono_sec		    ; otherwise, increment second
@@ -162,14 +171,55 @@ chrono_interrupt
     movff   time_tmp,second	    ; restore second state variable
 
     btfss   TIME_CY		    ; if the minutes have to be incremented
-    goto    int_end
+    goto    countdown_interrupt
     incf    chrono_min		    ;
     movff   minute,time_tmp	    ; save minute state variable
     movff   chrono_min,minute	    ; put chrono minute into minute variable
     call    compute_min		    ; compute minutes out of seconds
     movff   minute,chrono_min	    ; restore chrono minute variable
     movff   time_tmp,minute	    ; restore minute state variable
+    
+    ; COUNTDOWN TIME
+    
+countdown_interrupt
+    btfss   CD_ON		    ; if chrono flag not set, skip
+    goto    int_end
+        
+    movlw   0x00
+    cpfseq  cd_min
+    goto    countdown_next
+    cpfseq  cd_sec
+    goto    countdown_next
+    goto    countdown_end
+    
+countdown_next
+    incf    cd_tick		    ; increment the time tick
+    movlw   0x32		    ;
+    cpfseq  cd_tick		    ; check if tick == 50 (0.1 sec)
+    goto    int_end
+    
+    clrf    cd_tick		    ; reset the tick counter
+    incf    cd_ten		    ; increment 1/10 sec counter
+    movlw   .9			    ;
+    cpfsgt  cd_ten		    ; check if more than 0.9s
+    goto    int_end		    ; if not, continue
+    clrf    cd_ten		    ;
+    
+    decf    cd_sec		    ; otherwise, decrement second
+    movff   second,time_tmp	    ; save second state variable
+    movff   cd_sec,second	    ; put countdown second into second variable
+    call    compute_sec_dec	    ; compute incrementation
+    movff   second,cd_sec	    ; restore countdown second variable
+    movff   time_tmp,second	    ; restore second state variable
 
+    btfss   TIME_CY		    ; if the minutes have to be incremented
+    goto    int_end
+    decf    cd_min
+    goto    int_end
+
+countdown_end
+    bsf	    CD_LED
+    
 int_end
     movff   flags_tmp,time_flags    ;restore custom flags
     movff   bsr_temp, BSR	    ;restore bsr
@@ -214,6 +264,10 @@ stan_table
     data    "Chrono :        "
 #define	TBL_MENU_CHOICE_CHRONO	.192
     data    "S1:Sor S2:ON/OFF"
+#define	TBL_MENU_SETCD	    	.208
+    data    "Countdown       "
+#define	TBL_MENU_CHOICE_CD	.224
+    data    "Sor/Hm     ++/ON"
 
 ; -------------------------- Actual initialisation -----------------------------
     clrf    TRIS_LED	    ;
@@ -262,7 +316,10 @@ stan_table
     clrf    chrono_ten
     clrf    chrono_min	    ;
     clrf    chrono_sec	    ; clear chrono variables
-    clrf    LED
+    clrf    cd_tick
+    clrf    cd_ten
+    clrf    cd_min	    ;
+    clrf    cd_sec	    ; clear chrono variables
     
     call    delay_1s	    ;
     call    delay_1s	    ; freeze for 2 seconds to display the name 
@@ -485,6 +542,16 @@ compute_hour
     bsf	    TIME_CY	    ; if so, clear hour and set carry flag
     return
     
+compute_sec_dec
+    bcf	    TIME_CY	    ; reset time carry flag
+    movlw   .255	    ;
+    cpfseq  second	    ; check if second not 254 (-1 unsigned)
+    return		    ; if not, return
+    movlw   .59		    ;
+    movwf   second
+    bsf	    TIME_CY	    ; if so, reset second and set carry flag
+    return
+    
 ;*******************************************************************************
 ;
 ; MAIN LOOP
@@ -534,20 +601,19 @@ menu_chrono
     goto    menu_chrono
     call    debounce_button2
 
-;menu_countdown_lcd	    	; take care of the "Countdown" manu
-;    movlw   TBL_MENU_COUNTDOWN 
-;    movwf   ptr_pos	    ;
-;    call    stan_char_1	    ; send "Compte à rebours" to the LCD line 1
-;    movlw   TBL_MENU_CHOICE1; 
-;    movwf   ptr_pos	    ;
-;    call    stan_char_2	    ; send "S1:Sel    S2:Svt" to the LCD line 2
-;menu_countdown
-;    btfsc   BUTTON1
-;    ;display menu is selected
-;    btfsc   BUTTON2
-;    goto    menu_countdown
-;    call    debounce_button2
-;    ;display menu is selected
+menu_countdown_lcd	    	; take care of the "Countdown" manu
+    movlw   TBL_MENU_COUNTDOWN 
+    movwf   ptr_pos	    ;
+    call    stan_char_1	    ; send "Compte à rebours" to the LCD line 1
+    movlw   TBL_MENU_CHOICE1; 
+    movwf   ptr_pos	    ;
+    call    stan_char_2	    ; send "S1:Sel    S2:Svt" to the LCD line 2
+menu_countdown
+    btfss   BUTTON1
+    goto subroutine_countdown
+    btfsc   BUTTON2
+    goto    menu_countdown
+    call    debounce_button2
     
     GOTO    main	    ; loop forever
 
@@ -726,16 +792,86 @@ subroutine_chrono_clock
     goto    chrono_clock_button1
     call    debounce_button2	; wait for user to release the button
     btg	    CHRONO_ON		; toggle the chrono flag
-    btg	    LED,0		; toggle the led0
+    btg	    CHRONO_LED		; toggle the led0
 chrono_clock_button1
     btfsc   BUTTON1		; if the button1 hasn't been pressed
     goto    subroutine_chrono_clock
     call    debounce_button1	; otherwise
     bcf	    CHRONO_ON		; clear the chrono flag
-    bcf	    LED,0		; turn of the led0
+    bcf	    CHRONO_LED		; turn of the led0
     clrf    chrono_min		;
     clrf    chrono_sec		; reset the chrono time
     goto    menu_chrono_lcd
+    
+; COUNTDOWN ROUTINE
+
+subroutine_countdown
+    call    debounce_button1	;wait for user to release the button
+    movlw   TBL_MENU_SETCD
+    movwf   ptr_pos		;
+    call    stan_char_1		;display the static part of the first line
+    movlw   TBL_MENU_CHOICE_CD
+    movwf   ptr_pos		;
+    call    stan_char_2		;display the second part of the line
+    movlw   0x8D		;
+    call    LCDXY		;position the cursor at the right place
+    movlw   0x3A		;
+    movwf   temp_wr		;
+    call    d_write		;display ':'
+
+subroutine_countdown_clock
+    movf    cd_sec,w	;
+    call    bin_bcd		;transform the seconds value into BCD for LCD
+    movlw   0x8F		;
+    call    LCDXY		;position the cursor at the right place
+    movff   LSD,temp_wr		;
+    call    d_write		;display the unities of seconds
+    movlw   0x8E		;
+    call    LCDXY		;position the cursor at the right place
+    movff   MsD,temp_wr		;
+    call    d_write		;display the decades of seconds
+    
+    movf    cd_min,w	;
+    call    bin_bcd		;transform the seconds value into BCD for LCD
+    movlw   0x8C		;
+    call    LCDXY		;position the cursor at the right place
+    movff   LSD,temp_wr		;
+    call    d_write		;display the unities of minutes
+    movlw   0x8B		;
+    call    LCDXY		;position the cursor at the right place
+    movff   MsD,temp_wr		;
+    call    d_write		;display the decades of minutes
+
+    btfsc   BUTTON2		; if the button1 has been pressed
+    goto    cd_clock_button1
+    call    debounce_button2	; wait for a user input
+    btfsc   LG_CLICK
+    goto    cd_toggle_on
+    btfsc   SET_MIN
+    goto    cd_set_min
+    incf    cd_sec
+    movlw   .59
+    cpfslt  cd_sec
+    clrf    cd_sec
+    goto    cd_clock_button1
+cd_set_min
+    incf    cd_min
+    movlw   .59
+    cpfslt  cd_min
+    clrf    cd_min
+    goto    cd_clock_button1
+cd_toggle_on
+    btg	    CD_ON
+
+cd_clock_button1
+    btfsc   BUTTON1		; if the button1 hasn't been pressed
+    goto    subroutine_countdown_clock
+    call    debounce_button1	; otherwise
+    btfss   LG_CLICK
+    goto    menu_countdown_lcd
+    btg	    SET_MIN
+    goto    subroutine_countdown_clock
+    
 ;*******************************************************************************
 ;
 ; END OF PROGRAM
