@@ -214,6 +214,8 @@ countdown_next
 
     btfss   TIME_CY		    ; if the minutes have to be incremented
     goto    int_end
+    movlw   0x00
+    cpfseq  cd_min
     decf    cd_min
     goto    int_end
 
