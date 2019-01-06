@@ -115,30 +115,31 @@ HighInterrupt
     incf    tick		    ; increment the time tick
     movlw   0x32		    ;
     cpfseq  tick		    ; check if tick == 50 (0.1 sec)
-    goto    int_end
+    goto    chrono_interrupt
     
     clrf    tick		    ; reset the tick counter
     incf    sec_tenth		    ; increment 1/10 sec counter
     movlw   .9			    ;
     cpfsgt  sec_tenth		    ; check if more than 0.9s
-    goto    int_end		    ; if not, continue
+    goto    chrono_interrupt		    ; if not, continue
     clrf    sec_tenth		    ;
     
     incf    second		    ; otherwise, increment second
     call    compute_sec		    ;
     btfss   TIME_CY		    ;
-    goto    int_end
+    goto    chrono_interrupt
     
     incf    minute		    ; 
     call    compute_min		    ; compute minutes out of seconds
     btfss   TIME_CY		    ;
-    goto    int_end
+    goto    chrono_interrupt
     
     incf    hour		    ;
     call    compute_hour	    ; compute hours out of minutes
     
     ; CHRONO TIME
     
+chrono_interrupt
     btfss   CHRONO_ON
     goto    int_end
     incf    chrono_tick		    ; increment the chrono tick
@@ -725,14 +726,13 @@ subroutine_chrono_clock
     goto    chrono_clock_button1
     call    debounce_button2	; wait for user to release the button
     btg	    CHRONO_ON
-    btfss   CHRONO_ON
-    bcf	    LED,0
-    bsf	    LED,0
+    btg	    LED,0
 chrono_clock_button1
     btfsc   BUTTON1		; if the button1 hasn't been pressed
     goto    subroutine_chrono_clock
     call    debounce_button1	; otherwise
     bcf	    CHRONO_ON
+    bcf	    LED,0
     clrf    chrono_min
     clrf    chrono_sec
     goto    menu_chrono_lcd
