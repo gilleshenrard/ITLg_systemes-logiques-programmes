@@ -161,7 +161,7 @@ chrono_interrupt
     movff   second,chrono_sec	    ; restore chrono second variable
     movff   time_tmp,second	    ; restore second state variable
 
-    btfss   TIME_CY		    ;
+    btfss   TIME_CY		    ; if the minutes have to be incremented
     goto    int_end
     incf    chrono_min		    ;
     movff   minute,time_tmp	    ; save minute state variable
@@ -665,11 +665,11 @@ subroutine_settings_clock
     clrf    second		;
     clrf    sec_tenth		;
     btfss   SET_HOUR		; if hours are to be incremented (<> minutes)
-    goto    settings_inc_minute	
+    goto    settings_inc_minute
     incf    hour
     call    compute_hour
 settings_inc_minute
-    btfsc   SET_HOUR		;
+    btfsc   SET_HOUR		; if minutes are to be incremented (<> hours)
     goto    settings_clock_button1
     incf    minute
     call    compute_min
@@ -725,16 +725,16 @@ subroutine_chrono_clock
     btfsc   BUTTON2		; if the button2 hasn't been pressed
     goto    chrono_clock_button1
     call    debounce_button2	; wait for user to release the button
-    btg	    CHRONO_ON
-    btg	    LED,0
+    btg	    CHRONO_ON		; toggle the chrono flag
+    btg	    LED,0		; toggle the led0
 chrono_clock_button1
     btfsc   BUTTON1		; if the button1 hasn't been pressed
     goto    subroutine_chrono_clock
     call    debounce_button1	; otherwise
-    bcf	    CHRONO_ON
-    bcf	    LED,0
-    clrf    chrono_min
-    clrf    chrono_sec
+    bcf	    CHRONO_ON		; clear the chrono flag
+    bcf	    LED,0		; turn of the led0
+    clrf    chrono_min		;
+    clrf    chrono_sec		; reset the chrono time
     goto    menu_chrono_lcd
 ;*******************************************************************************
 ;
