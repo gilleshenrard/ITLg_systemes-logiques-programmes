@@ -802,10 +802,10 @@ chrono_clock_button1
     btfsc   BUTTON1		; if the button1 hasn't been pressed
     goto    subroutine_chrono_clock
     call    debounce_button1	; otherwise
-    bcf	    CHRONO_ON		; clear the chrono flag
-    bcf	    CHRONO_LED		; turn of the led0
+    btfsc   CHRONO_ON
+    goto    menu_chrono_lcd	; if chrono still on, return to menu
     clrf    chrono_min		;
-    clrf    chrono_sec		; reset the chrono time
+    clrf    chrono_sec		; otherwise, clear time
     goto    menu_chrono_lcd
     
 ; COUNTDOWN ROUTINE
