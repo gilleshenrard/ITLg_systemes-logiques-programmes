@@ -214,9 +214,9 @@ countdown_next
 
     btfss   TIME_CY		    ; if the minutes have to be incremented
     goto    int_end
-    movlw   0x00
-    cpfseq  cd_min
-    decf    cd_min
+    movlw   0x00		    ;
+    cpfseq  cd_min		    ;
+    decf    cd_min		    ; if minutes <> 0, decrement
     goto    int_end
 
 countdown_end
@@ -852,39 +852,39 @@ subroutine_countdown_clock
     btfsc   BUTTON2		; if the button1 has been pressed
     goto    cd_clock_button1
     call    debounce_button2	; wait for a user input
-    btfsc   LG_CLICK
-    goto    cd_toggle_on
-    btfsc   SET_MIN
-    goto    cd_set_min
-    incf    cd_sec
-    movlw   .60
-    cpfslt  cd_sec
-    clrf    cd_sec
+    btfsc   LG_CLICK		;
+    goto    cd_toggle_on	; if long click, toggle Countdown ON
+    btfsc   SET_MIN		;
+    goto    cd_set_min		; if minutes are to be set, jump to section
+    incf    cd_sec		;
+    movlw   .60			;
+    cpfslt  cd_sec		;
+    clrf    cd_sec		; otherwise, increment seconds and compute
     goto    cd_clock_button1
 cd_set_min
-    incf    cd_min
-    movlw   .60
-    cpfslt  cd_min
-    clrf    cd_min
-    goto    cd_clock_button1
+    incf    cd_min		;
+    movlw   .60			;
+    cpfslt  cd_min		;
+    clrf    cd_min		; increment minutes and compute
+    goto    cd_clock_button1	;
 cd_toggle_on
-    btg	    CD_ON
+    btg	    CD_ON		; toggle countdown ON/OFF
 
 cd_clock_button1
     btfsc   BUTTON1		; if the button1 hasn't been pressed
     goto    subroutine_countdown_clock
     call    debounce_button1	; otherwise
-    btfss   LG_CLICK
-    goto    cd_clear
-    btg	    SET_MIN
+    btfss   LG_CLICK		;
+    goto    cd_clear		; if not long click, go to getting out section
+    btg	    SET_MIN		; otherwise, toggle min/sec to be set up
     goto    subroutine_countdown_clock
     
 cd_clear
-    btfsc   CD_ON
-    goto    menu_countdown_lcd
-    clrf    cd_min
-    clrf    cd_sec
-    bcf	    CD_LED
+    btfsc   CD_ON		;
+    goto    menu_countdown_lcd	; if countdown running, simply go back to menu
+    clrf    cd_min		;
+    clrf    cd_sec		;
+    bcf	    CD_LED		; otherwise, clear time and indicator
     goto    menu_countdown_lcd
 ;*******************************************************************************
 ;
