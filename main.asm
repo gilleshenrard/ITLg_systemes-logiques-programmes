@@ -219,6 +219,7 @@ countdown_next
 
 countdown_end
     bsf	    CD_LED
+    bcf	    CD_ON
     
 int_end
     movff   flags_tmp,time_flags    ;restore custom flags
@@ -872,10 +873,17 @@ cd_clock_button1
     goto    subroutine_countdown_clock
     call    debounce_button1	; otherwise
     btfss   LG_CLICK
-    goto    menu_countdown_lcd
+    goto    cd_clear
     btg	    SET_MIN
     goto    subroutine_countdown_clock
     
+cd_clear
+    btfsc   CD_ON
+    goto    menu_countdown_lcd
+    clrf    cd_min
+    clrf    cd_sec
+    bcf	    CD_LED
+    goto    menu_countdown_lcd
 ;*******************************************************************************
 ;
 ; END OF PROGRAM
