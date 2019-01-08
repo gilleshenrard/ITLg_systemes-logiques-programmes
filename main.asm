@@ -264,7 +264,7 @@ stan_table
 #define	TBL_MENU_CHOICE24	.160
     data    "S1:Svt/Sor S2:++"
 #define	TBL_MENU_SETCHRONO	.176
-    data    "Chrono :        "
+    data    "Ecoule          "
 #define	TBL_MENU_CHOICE_CHRONO	.192
     data    "S1:Sor S2:ON/OFF"
 #define	TBL_MENU_SETCD	    	.208
@@ -771,9 +771,14 @@ subroutine_chrono
     movlw   0x3A		;
     movwf   temp_wr		;
     call    d_write		;display ':'
+    movlw   0x8A		;
+    call    LCDXY		;position the cursor at the right place
+    movlw   0x3A		;
+    movwf   temp_wr		;
+    call    d_write		;display ':'
 
 subroutine_chrono_clock
-    movf    chrono_sec,w	;
+    movf    chrono_ten,w	;
     call    bin_bcd		;transform the seconds value into BCD for LCD
     movlw   0x8F		;
     call    LCDXY		;position the cursor at the right place
@@ -784,13 +789,24 @@ subroutine_chrono_clock
     movff   MsD,temp_wr		;
     call    d_write		;display the decades of seconds
     
-    movf    chrono_min,w	;
+    movf    chrono_sec,w	;
     call    bin_bcd		;transform the seconds value into BCD for LCD
     movlw   0x8C		;
     call    LCDXY		;position the cursor at the right place
     movff   LSD,temp_wr		;
-    call    d_write		;display the unities of minutes
+    call    d_write		;display the unities of seconds
     movlw   0x8B		;
+    call    LCDXY		;position the cursor at the right place
+    movff   MsD,temp_wr		;
+    call    d_write		;display the decades of seconds
+    
+    movf    chrono_min,w	;
+    call    bin_bcd		;transform the seconds value into BCD for LCD
+    movlw   0x89		;
+    call    LCDXY		;position the cursor at the right place
+    movff   LSD,temp_wr		;
+    call    d_write		;display the unities of minutes
+    movlw   0x88		;
     call    LCDXY		;position the cursor at the right place
     movff   MsD,temp_wr		;
     call    d_write		;display the decades of minutes
