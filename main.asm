@@ -823,7 +823,8 @@ chrono_clock_button1
     btfsc   CHRONO_ON
     goto    menu_chrono_lcd	; if chrono still on, return to menu
     clrf    chrono_min		;
-    clrf    chrono_sec		; otherwise, clear time
+    clrf    chrono_sec		;
+    clrf    chrono_ten		; otherwise, clear time
     goto    menu_chrono_lcd
     
 ; COUNTDOWN ROUTINE
