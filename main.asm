@@ -221,7 +221,6 @@ countdown_next
 
 countdown_end
     bsf	    CD_LED
-    bcf	    CD_ON
     
 int_end
     movff   flags_tmp,time_flags    ;restore custom flags
@@ -820,8 +819,8 @@ chrono_clock_button1
     btfsc   BUTTON1		; if the button1 hasn't been pressed
     goto    subroutine_chrono_clock
     call    debounce_button1	; otherwise
-    btfsc   CHRONO_ON
-    goto    menu_chrono_lcd	; if chrono still on, return to menu
+    bcf	    CHRONO_LED		;
+    bcf	    CHRONO_ON		;
     clrf    chrono_min		;
     clrf    chrono_sec		;
     clrf    chrono_ten		; otherwise, clear time
@@ -897,8 +896,7 @@ cd_clock_button1
     goto    subroutine_countdown_clock
     
 cd_clear
-    btfsc   CD_ON		;
-    goto    menu_countdown_lcd	; if countdown running, simply go back to menu
+    bcf	    CD_ON		;
     clrf    cd_min		;
     clrf    cd_sec		;
     bcf	    CD_LED		; otherwise, clear time and indicator
