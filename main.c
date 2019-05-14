@@ -65,22 +65,24 @@ void init(void);
 void __interrupt(high_priority) Int_Vect_High(void)
 {
     LED0 = 1;
-    //inform DAC that we are communicating with him
-    CS_DAC = 0;
-    SSPBUF=0x10;
-    while(!SSPSTATbits.BF){}
-    //load the current data value in the SPI output buffer
-    SSPBUF = data_buffer[data_ptr];
-    //wait until the data is ready
-    while(!SSPSTATbits.BF){}
-    //inform DAC that we stop communicating with him
-    CS_DAC = 1;
-    //send an impulsion to the DAC latch
-    LDAC_DAC = 0;
-    LDAC_DAC = 1;
-    
-    data_ptr += 1;
-    data_ptr %= BUFFER_SZ;
+/*
+        //inform DAC that we are communicating with him
+        CS_DAC = 0;
+        SSPBUF=0x10;
+        while(!SSPSTATbits.BF){}
+        //load the current data value in the SPI output buffer
+        SSPBUF = data_buffer[data_ptr];
+        //wait until the data is ready
+        while(!SSPSTATbits.BF){}
+        //inform DAC that we stop communicating with him
+        CS_DAC = 1;
+        //send an impulsion to the DAC latch
+        LDAC_DAC = 0;
+        LDAC_DAC = 1;
+
+        data_ptr += 1;
+        data_ptr %= BUFFER_SZ;
+*/
     LED0 = 0;
     PIR1bits.CCP1IF = 0;
 }
@@ -305,9 +307,9 @@ void init(){
     
     // configure CCP1 module as comparator + enable special trigger
     CCP1CON = 0b00001011;
-    // + set time interval value to 100 (1 int. every 10 us)
-    CCPR1H = 0x00;
-    CCPR1L = 0x64;
+    // + set time interval value to 271 (1 int. every 62.5 us)
+    CCPR1H = 0x02;
+    CCPR1L = 0x71;
     
     // assign timer1 as a source for ECCP1
     T3CON = 0;
