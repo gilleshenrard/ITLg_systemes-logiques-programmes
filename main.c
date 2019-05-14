@@ -33,10 +33,12 @@
 #define     CS_DAC      PORTCbits.RC2
 #define     LDAC_DAC    PORTCbits.RC0
 
+#define     CPT8MHz     0x04E2
+#define     CPT16MHz    0x0271
+
 #define     PI          3.141592
 #define     D_PI         6.283184
 
-int _8MHz=1;
 int tick=0;
 int duty=0;
 int freq_divider=1;
@@ -65,26 +67,23 @@ void init(void);
 void __interrupt(high_priority) Int_Vect_High(void)
 {
     LED0 = 1;
-    if(!_8MHz || (_8MHz && !(tick%2))){
-        //inform DAC that we are communicating with him
-        CS_DAC = 0;
-        SSPBUF=0x10;
-        while(!SSPSTATbits.BF){}
-        //load the current data value in the SPI output buffer
-        SSPBUF = data_buffer[data_ptr];
-        //wait until the data is ready
-        while(!SSPSTATbits.BF){}
-        //inform DAC that we stop communicating with him
-        CS_DAC = 1;
-        //send an impulsion to the DAC latch
-        LDAC_DAC = 0;
-        LDAC_DAC = 1;
+    //inform DAC that we are communicating with him
+    CS_DAC = 0;
+    SSPBUF=0x10;
+    while(!SSPSTATbits.BF){}
+    //load the current data value in the SPI output buffer
+    SSPBUF = data_buffer[data_ptr];
+    //wait until the data is ready
+    while(!SSPSTATbits.BF){}
+    //inform DAC that we stop communicating with him
+    CS_DAC = 1;
+    //send an impulsion to the DAC latch
+    LDAC_DAC = 0;
+    LDAC_DAC = 1;
 
-        data_ptr += 1;
-        data_ptr %= BUFFER_SZ;
-    }
-    tick++;
-    tick %= 2;
+    data_ptr += 1;
+    data_ptr %= BUFFER_SZ;
+
     LED0 = 0;
     PIR1bits.CCP1IF = 0;
 }
@@ -306,8 +305,8 @@ void init(){
     // configure CCP1 module as comparator + enable special trigger
     CCP1CON = 0b00001011;
     // + set time interval value to 271 (1 int. every 62.5 us)
-    CCPR1H = 0x02;
-    CCPR1L = 0x71;
+    CCPR1 = CPT8MHz;
+    
     
     // assign timer1 as a source for ECCP1
     T3CON = 0;
