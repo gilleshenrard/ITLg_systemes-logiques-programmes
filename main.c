@@ -305,9 +305,9 @@ void init(){
     
     // configure CCP1 module as comparator + enable special trigger
     CCP1CON = 0b00001011;
-    // + set time interval value to 60 (1 int. every 6 us)
+    // + set time interval value to 100 (1 int. every 10 us)
     CCPR1H = 0x00;
-    CCPR1L = 0x0A;
+    CCPR1L = 0x64;
     
     // assign timer1 as a source for ECCP1
     T3CON = 0;
