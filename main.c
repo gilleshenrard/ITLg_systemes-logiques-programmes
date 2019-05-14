@@ -36,10 +36,10 @@
 #define     PI          3.141592
 #define     D_PI         6.283184
 
-int tick;
-int duty;
-int freq_divider;
-int period;
+int _8MHz=1;
+int tick=0;
+int duty=0;
+int freq_divider=1;
 int selection=0;
 int select_settings=0;
 int selected=0;
@@ -65,6 +65,8 @@ void init(void);
 void __interrupt(high_priority) Int_Vect_High(void)
 {
     LED0 = 1;
+    if(!_8MHz || (_8MHz && !(tick%2))){
+        LED4 = 1;
 /*
         //inform DAC that we are communicating with him
         CS_DAC = 0;
@@ -83,6 +85,10 @@ void __interrupt(high_priority) Int_Vect_High(void)
         data_ptr += 1;
         data_ptr %= BUFFER_SZ;
 */
+        LED4 = 0;
+    }
+    tick++;
+    tick %= 2;
     LED0 = 0;
     PIR1bits.CCP1IF = 0;
 }
@@ -282,10 +288,6 @@ void main(void) {
 }
 
 void init(){
-    tick = 0;
-    duty = 0;
-    freq_divider = 1;
-
     // disable interruptions + enable high priority
     // (interrupts disabled by default until proper function selected)
     INTCON = 0;
