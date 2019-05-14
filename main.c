@@ -66,8 +66,6 @@ void __interrupt(high_priority) Int_Vect_High(void)
 {
     LED0 = 1;
     if(!_8MHz || (_8MHz && !(tick%2))){
-        LED4 = 1;
-/*
         //inform DAC that we are communicating with him
         CS_DAC = 0;
         SSPBUF=0x10;
@@ -84,8 +82,6 @@ void __interrupt(high_priority) Int_Vect_High(void)
 
         data_ptr += 1;
         data_ptr %= BUFFER_SZ;
-*/
-        LED4 = 0;
     }
     tick++;
     tick %= 2;
