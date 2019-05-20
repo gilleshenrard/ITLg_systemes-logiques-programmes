@@ -26,19 +26,20 @@
 
 #define     Button_Left PORTBbits.RB0
 #define     Button_Right PORTAbits.RA5
-#define     BUFFER_SZ   128
+#define     BUFFER_SZ   640
 
 #define     SDO         PORTCbits.RC5
 #define     SCK         PORTCbits.RC3
 #define     CS_DAC      PORTCbits.RC2
 #define     LDAC_DAC    PORTCbits.RC0
 
-#define     CPT8MHz     0x04E2
-#define     CPT16MHz    0x0271
+#define     CPT8MHz     0x4E2
+#define     CPT16MHz    0x271
 
 #define     PI          3.141592
 #define     D_PI         6.283184
 
+/*
 int tick=0;
 int duty=0;
 int freq_divider=1;
@@ -46,10 +47,6 @@ int selection=0;
 int select_settings=0;
 int selected=0;
 int data_buffer[BUFFER_SZ]={0};
-int data_ptr = 0;
-
-unsigned char test = 0;
-
 char msg_buffer[17] = {0};
 char msg_processing[17] = {" Processing...  "};
 char msg_exit[17] = {"Stop            "};
@@ -61,6 +58,15 @@ char main_menu[4][17]={ "     Square     ",
 
 char settings_menu[2][17]={ "  Freq. divider ",
                             "   Duty Cycle   "};
+*/
+int data[BUFFER_SZ] = {0};
+                   //steps length for 16 kHz
+int steps[2][10]={ {4, 5, 8, 10, 16, 20, 32, 40, 64, 80},
+                   //steps length for 8 kHz
+                   {8, 10, 16, 20, 32, 40, 64, 80, 128, 160}};
+char codec = 0; //0 if 16, 1 if 8 kHz
+int cursor = 0;
+char freq = 0;
 
 void init(void);
 
@@ -72,7 +78,7 @@ void __interrupt(high_priority) Int_Vect_High(void)
     SSPBUF=0x10;
     while(!SSPSTATbits.BF){}
     //load the current data value in the SPI output buffer
-    SSPBUF = data_buffer[data_ptr];
+    SSPBUF = data[cursor];
     //wait until the data is ready
     while(!SSPSTATbits.BF){}
     //inform DAC that we stop communicating with him
@@ -81,20 +87,25 @@ void __interrupt(high_priority) Int_Vect_High(void)
     LDAC_DAC = 0;
     LDAC_DAC = 1;
 
-    data_ptr += 1;
-    data_ptr %= BUFFER_SZ;
+    cursor += steps[codec][freq];
+    if(cursor >= BUFFER_SZ)
+        cursor = 0;
 
     LED0 = 0;
     PIR1bits.CCP1IF = 0;
 }
 
 void main(void) {
+    LCDInit();
     init();
     
-    LCDInit();
+    for(int i=0 ; i<BUFFER_SZ ; i++)
+        data[i] = (int)(128.0 + 127.0 * sin((D_PI*(float)i) / (float)BUFFER_SZ));
     
     while(1)
-    {   
+    {
+        
+/*
         ///////////////////////////////////////////////////////////////////
         //////////////////////// Main menu ////////////////////////////////
         ///////////////////////////////////////////////////////////////////
@@ -278,6 +289,7 @@ void main(void) {
                 Msg_Write("     ERROR      ");
                 break;
         }
+*/
     }
     return;
 }
@@ -285,8 +297,8 @@ void main(void) {
 void init(){
     // disable interruptions + enable high priority
     // (interrupts disabled by default until proper function selected)
-    INTCON = 0;
-    INTCONbits.GIE = 0;
+    INTCON = 1;
+    INTCONbits.GIE = 1;
     RCONbits.IPEN = 1;
     
     // enable timer1 (16 bits, timer mode, prescaler 1:1, rest is unused)
@@ -304,14 +316,11 @@ void init(){
     
     // configure CCP1 module as comparator + enable special trigger
     CCP1CON = 0b00001011;
-    // + set time interval value to 271 (1 int. every 62.5 us)
-    CCPR1 = CPT8MHz;
-    
+    CCPR1 = CPT16MHz;
     
     // assign timer1 as a source for ECCP1
     T3CON = 0;
-    T3CONbits.T3CCP1 = 0;
-    T3CONbits.T3CCP2 = 1;
+    T3CONbits.RD16 = 1;
     
     //set RB0 and RA5 as inputs (buttons)
     TRISBbits.TRISB0 = 1;
@@ -352,7 +361,6 @@ void init(){
     //set MSSP1 status register for SPI
     SSPSTAT = 0;
     SSPSTATbits.CKE = 1;
-
  
     //set DAC CS and LDAC as output
     LATC = 0;
