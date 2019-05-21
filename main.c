@@ -26,53 +26,36 @@
 
 #define     Button_Left PORTBbits.RB0
 #define     Button_Right PORTAbits.RA5
-#define     BUFFER_SZ   128
 
 #define     SDO         PORTCbits.RC5
 #define     SCK         PORTCbits.RC3
 #define     CS_DAC      PORTCbits.RC2
 #define     LDAC_DAC    PORTCbits.RC0
 
-#define     CPT8MHz     0x04E2
-#define     CPT16MHz    0x0271
+#define     ANALOG      PORTAbits.RA1   //temperature sensor on the card
+
+#define     CPT8kHz     0x4E2
+#define     CPT16kHz    0x271
 
 #define     PI          3.141592
 #define     D_PI         6.283184
-
-int tick=0;
-int duty=0;
-int freq_divider=1;
-int selection=0;
-int select_settings=0;
-int selected=0;
-int data_buffer[BUFFER_SZ]={0};
-int data_ptr = 0;
-
-unsigned char test = 0;
-
-char msg_buffer[17] = {0};
-char msg_processing[17] = {" Processing...  "};
-char msg_exit[17] = {"Stop            "};
-char msg_confirm[17] = {"     Done !     "};
-char main_menu[4][17]={ "     Square     ",
-                        "      Sine      ",
-                        "    Triangle    ",
-                        "    Settings    "};
-
-char settings_menu[2][17]={ "  Freq. divider ",
-                            "   Duty Cycle   "};
 
 void init(void);
 
 void __interrupt(high_priority) Int_Vect_High(void)
 {
     LED0 = 1;
+
+    //launch ADC
+    ADCON0bits.GO_DONE = 1;
+    while(ADCON0bits.GO_DONE){}
+    
     //inform DAC that we are communicating with him
     CS_DAC = 0;
     SSPBUF=0x10;
     while(!SSPSTATbits.BF){}
-    //load the current data value in the SPI output buffer
-    SSPBUF = data_buffer[data_ptr];
+    //load the DCA value in the SPI output buffer
+    SSPBUF = ADRESH + 1;
     //wait until the data is ready
     while(!SSPSTATbits.BF){}
     //inform DAC that we stop communicating with him
@@ -81,212 +64,23 @@ void __interrupt(high_priority) Int_Vect_High(void)
     LDAC_DAC = 0;
     LDAC_DAC = 1;
 
-    data_ptr += 1;
-    data_ptr %= BUFFER_SZ;
-
     LED0 = 0;
     PIR1bits.CCP1IF = 0;
 }
 
 void main(void) {
+    LCDInit();
     init();
     
-    LCDInit();
-    
-    while(1)
-    {   
-        ///////////////////////////////////////////////////////////////////
-        //////////////////////// Main menu ////////////////////////////////
-        ///////////////////////////////////////////////////////////////////
-        //print the second line for the main menu
-        LCDClear();
-        LCDLine_2();
-        Msg_Write("Select    Change");
-        
-        //wait for a selection
-        selected = 0;
-        while(!selected){
-            //Display the main menu
-            LCDLine_1();
-            Msg_Write(main_menu[selection]);
-           
-            //if right button is pressed, debounce and scroll through options
-            if(!Button_Right){
-                Delay_ms(5);
-                while(!Button_Right){}
-                selection += 1;
-                selection %= 4;
-            }
-           
-            //if left button is pressed, debounce and set selection
-            if(!Button_Left){
-                Delay_ms(5);
-                while(!Button_Left){}
-                selected = 1;
-            }
-        }
-        
-        ///////////////////////////////////////////////////////////////////
-        //////////////////////// Actual functions /////////////////////////
-        ///////////////////////////////////////////////////////////////////
-        
-        switch(selection){
-            case 0: //square wave
-                LCDClear();
-                LCDLine_1();
-                Msg_Write(msg_processing);
-                for(int i=0 ; i<BUFFER_SZ ; i++){
-                    data_buffer[i] = i < ((float)duty/100)*BUFFER_SZ ? 0xFF : 0x00;
-                }
-                
-                LCDClear();
-                LCDLine_1();
-                Msg_Write(msg_confirm);
-                LCDLine_2();
-                Msg_Write(msg_exit);
-                //buffer is filled -> enable interrupts to send values
-                //  via SPI to the DAC
-                INTCONbits.GIE = 1;
-                //wait for button to be pressed
-                while(Button_Left){}
-                //debounce, disable interrupts and reset data pointer
-                Delay_ms(5);
-                while(!Button_Left){}
-                INTCONbits.GIE = 0;
-                
-                data_ptr = 0;
-                break;
-                
-            case 1: //sine wave
-                LCDClear();
-                LCDLine_1();
-                Msg_Write(msg_processing);
-                for(int i=0 ; i<BUFFER_SZ ; i++){
-                    data_buffer[i] = (int)(128.0 + 127.0*sin((D_PI*(float)freq_divider*(float)i)/(float)BUFFER_SZ));
-                }
-                
-                LCDClear();
-                LCDLine_1();
-                Msg_Write(msg_confirm);
-                LCDLine_2();
-                Msg_Write(msg_exit);
-                //buffer is filled -> enable interrupts to send values
-                //  via SPI to the DAC
-                INTCONbits.GIE = 1;
-                //wait for button to be pressed
-                while(Button_Left){}
-                //debounce, disable interrupts and reset data pointer
-                Delay_ms(5);
-                while(!Button_Left){}
-                INTCONbits.GIE = 0;
-                
-                data_ptr = 0;
-                break;
-                
-            case 2: //triangle wave
-                LCDClear();
-                LCDLine_1();
-                Msg_Write(msg_processing);
-                Delay_ms(1000);
-                break;
-                
-            case 3: //settings
-                selected = 0;
-                while(!selected){
-                    //Display the settings menu
-                    LCDLine_1();
-                    Msg_Write(settings_menu[select_settings]);
-
-                    //if right button is pressed, debounce and set selection
-                    if(!Button_Right){
-                        Delay_ms(5);
-                        while(!Button_Right){}
-                        select_settings += 1;
-                        select_settings %= 2;
-                    }
-
-                    //if left button is pressed, debounce and scroll through options
-                    if(!Button_Left){
-                        Delay_ms(5);
-                        while(!Button_Left){}
-                        selected = 1;
-                    }
-                }
-                
-                //has settings option been selected ?
-                selected = 0;
-                while(!selected){
-                    // option has been selected
-                    if(select_settings == 0){
-                        LCDLine_2();
-                        sprintf(msg_buffer, "Div. value : %d  ", freq_divider);
-                        Msg_Write(msg_buffer);
-                        selected = 0;
-                        while(!selected){
-                            //if right button is pressed, debounce and set selection
-                            if(!Button_Right){
-                                Delay_ms(5);
-                                while(!Button_Right){}
-                                freq_divider *= 2;
-                                freq_divider = (freq_divider == 16 ? 1 : freq_divider);
-                            
-                                LCDLine_2();
-                                sprintf(msg_buffer, "Div. value : %d  ", freq_divider);
-                                Msg_Write(msg_buffer);
-                            }
-
-                            //if left button is pressed, debounce and scroll through options
-                            if(!Button_Left){
-                                Delay_ms(5);
-                                while(!Button_Left){}
-                                selected = 1;
-                            }
-                        }
-                    }
-                    else if(select_settings == 1){
-                        LCDLine_2();
-                        sprintf(msg_buffer, "DC value : %d%   ", duty);
-                        Msg_Write(msg_buffer);
-                        selected = 0;
-                        while(!selected){
-                            //if right button is pressed, debounce and set selection
-                            if(!Button_Right){
-                                Delay_ms(5);
-                                while(!Button_Right){}
-                                duty += 10;
-                                duty %= 100;
-                            
-                                LCDLine_2();
-                                sprintf(msg_buffer, "DC value : %d%   ", duty);
-                                Msg_Write(msg_buffer);
-                            }
-
-                            //if left button is pressed, debounce and scroll through options
-                            if(!Button_Left){
-                                Delay_ms(5);
-                                while(!Button_Left){}
-                                selected = 1;
-                            }
-                        }
-                    }
-                }
-                break;
-                
-            default: //error
-                LCDClear();
-                LCDLine_1();
-                Msg_Write("     ERROR      ");
-                break;
-        }
-    }
+    while(1){}
     return;
 }
 
 void init(){
     // disable interruptions + enable high priority
     // (interrupts disabled by default until proper function selected)
-    INTCON = 0;
-    INTCONbits.GIE = 0;
+    INTCON = 1;
+    INTCONbits.GIE = 1;
     RCONbits.IPEN = 1;
     
     // enable timer1 (16 bits, timer mode, prescaler 1:1, rest is unused)
@@ -304,14 +98,11 @@ void init(){
     
     // configure CCP1 module as comparator + enable special trigger
     CCP1CON = 0b00001011;
-    // + set time interval value to 271 (1 int. every 62.5 us)
-    CCPR1 = CPT8MHz;
-    
+    CCPR1 = CPT16kHz;
     
     // assign timer1 as a source for ECCP1
     T3CON = 0;
-    T3CONbits.T3CCP1 = 0;
-    T3CONbits.T3CCP2 = 1;
+    T3CONbits.RD16 = 1;
     
     //set RB0 and RA5 as inputs (buttons)
     TRISBbits.TRISB0 = 1;
@@ -352,7 +143,6 @@ void init(){
     //set MSSP1 status register for SPI
     SSPSTAT = 0;
     SSPSTATbits.CKE = 1;
-
  
     //set DAC CS and LDAC as output
     LATC = 0;
@@ -363,4 +153,26 @@ void init(){
     TRISCbits.TRISC5 = 0;
     LATCbits.LATC0 = 1;
     LATCbits.LATC2 = 1;
+    
+    //enable ADC module and select AN0 (potentiometer R3 on the board)
+    ADCON0 = 0;             
+    ADCON0bits.CHS = 0b0001; //select channel 1 (AN1)
+    ADCON0bits.ADON = 1;    //enable ADC
+    ADCON0bits.GO_DONE = 0; //clear conversion status flag
+    
+    //configure ADC module operation
+    ADCON1 = 0;   //select internal voltage references + set all as analog inputs
+    ADCON1bits.PCFG = 0b1011;   //set 4 first bits as analog
+    
+    //configure ADC justification
+    ADCON2 = 0;    //set AN0 as left justified
+    ADCON2bits.ADCS = 0b001;    //set TAD as 2
+    ADCON2bits.ACQT = 0b001;    //set OSC as 8
+    
+    //set A1 as input
+    TRISAbits.TRISA1 = 1;
+    
+    //clear ADC data registers
+    ADRESH = 0;
+    ADRESL = 0;
 }
