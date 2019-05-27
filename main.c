@@ -42,6 +42,8 @@
 
 void init(void);
 
+int x0=0, x1=0;
+int filter = 0;
 void __interrupt(high_priority) Int_Vect_High(void)
 {
     LED0 = 1;
@@ -54,8 +56,18 @@ void __interrupt(high_priority) Int_Vect_High(void)
     CS_DAC = 0;
     SSPBUF=0x10;
     while(!SSPSTATbits.BF){}
-    //load the DCA value in the SPI output buffer
-    SSPBUF = ADRESH + 1;
+    //load the DCA value in the SPI output buffer (depending on the filter)
+    switch(filter){
+        case 1: //low pass filter by two members mean
+            x0 = ADRESH;
+            SSPBUF = (x0 + x1) >>1;
+            x1 = x0;
+            break;
+        
+        default: //#nofilter
+            SSPBUF = ADRESH + 1;
+            break;
+    }
     //wait until the data is ready
     while(!SSPSTATbits.BF){}
     //inform DAC that we stop communicating with him
