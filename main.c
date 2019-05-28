@@ -39,8 +39,8 @@
 #define     CPT8kHz     0x4E2
 #define     CPT16kHz    0x271
 
-#define     CHAN_0      0b0000
-#define     CHAN_1      0b0001
+#define     POT      0b0000
+#define     ANALOG      0b0001
 
 #define     PI          3.141592
 #define     D_PI         6.283184
@@ -251,7 +251,7 @@ void init(){
     //channel 0 (AN0) = potentiometer R3 on the board
     //channel 1 (AN1) = temperature sensor on the board, used as analog in
     ADCON0 = 0;             
-    ADCON0bits.CHS = CHAN_0; //select channel 0
+    ADCON0bits.CHS = POT; //select channel 0
     ADCON0bits.ADON = 1;    //enable ADC
     ADCON0bits.GO_DONE = 0; //clear conversion status flag
     
@@ -283,7 +283,7 @@ void run_filter(void){
     Msg_Write("    Running     ");
     
     //select temp. sensor
-    ADCON0bits.CHS = CHAN_1;
+    ADCON0bits.CHS = ANALOG;
     //enable timer interrupt
     INTCONbits.GIE = 1;
     
@@ -298,6 +298,6 @@ void run_filter(void){
     LCD_SPI_IF = 0;
     
     //select potentiometer
-    ADCON0bits.CHS = CHAN_0;
+    ADCON0bits.CHS = POT;
     LCDClear();
 }
