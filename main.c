@@ -68,12 +68,12 @@ void __interrupt(high_priority) Int_Vect_High(void)
 
     //launch ADC
     ADCON0bits.GO_DONE = 1;
-    while(ADCON0bits.GO_DONE){}
+    while(ADCON0bits.GO_DONE)
     
     //inform DAC that we are communicating with him
     CS_DAC = 0;
     SSPBUF=0x10;
-    while(!SSPSTATbits.BF){}
+    while(!SSPSTATbits.BF)
     //load the DCA value in the SPI output buffer (depending on the filter)
     switch(filter){
         case 0: //low pass filter by two members mean
@@ -87,7 +87,7 @@ void __interrupt(high_priority) Int_Vect_High(void)
             break;
     }
     //wait until the data is ready
-    while(!SSPSTATbits.BF){}
+    while(!SSPSTATbits.BF)
     //inform DAC that we stop communicating with him
     CS_DAC = 1;
     //send an impulsion to the DAC latch
@@ -113,7 +113,7 @@ void main(void) {
     while(Button_Left){
         //read potentiometer
         ADCON0bits.GO_DONE = 1;
-        while(ADCON0bits.GO_DONE){}
+        while(ADCON0bits.GO_DONE)
         FE_choice = ADRESH/128;
         //interpret choice
         if(FE_choice){
@@ -129,7 +129,7 @@ void main(void) {
     }
     //debounce button
     Delay_ms(5);
-    while(!Button_Left){}
+    while(!Button_Left)
     LCDClear();
     
     while(1){
@@ -137,14 +137,14 @@ void main(void) {
         while(Button_Left){
             //read potentiometer
             ADCON0bits.GO_DONE = 1;
-            while(ADCON0bits.GO_DONE){}
+            while(ADCON0bits.GO_DONE)
             filter = ADRESH/64;
             LCDLine_1();
             Msg_Write(menu[filter]);
         }
         //debounce button
         Delay_ms(5);
-        while(!Button_Left){}
+        while(!Button_Left)
         LCDClear();
         
         ////////////////////////// MAIN MENU DISPLAY ///////////////////////////
@@ -285,12 +285,15 @@ void run_filter(void){
     //enable timer interrupt
     INTCONbits.GIE = 1;
     
-    while(Button_Left){}
+    while(Button_Left)
     Delay_ms(5);
-    while(!Button_Left){}
+    while(!Button_Left)
     
     //disable timer interrupt
     INTCONbits.GIE = 0;
+    
+    LCD_SPI_IF = 0;
+    
     //select potentiometer
     ADCON0bits.CHS = CHAN_0;
     LCDClear();
