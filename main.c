@@ -55,6 +55,7 @@ char menu[4][17] = {"      Mean      ",
                     "      Echo      "};
 
 void init(void);
+void run_filter(void);
 
 /****************************************************************************/
 /*  I : /                                                                   */
@@ -113,8 +114,7 @@ void main(void) {
     
     //sample frequency setup at boot
     LCDLine_1();
-    Msg_Write("sample frequency");       
-    ADCON0bits.CHS = CHAN_0; //select potentiometer
+    Msg_Write("sample frequency");
     while(Button_Left){
         //read potentiometer
         ADCON0bits.GO_DONE = 1;
@@ -155,7 +155,7 @@ void main(void) {
         ////////////////////////// MAIN MENU DISPLAY ///////////////////////////
         switch(filter){
             case 0: //mean low pass filter
-                LED1 = 1;
+                run_filter();
                 break;
                 
             case 1: //low pass filter
@@ -251,7 +251,7 @@ void init(){
     //channel 0 (AN0) = potentiometer R3 on the board
     //channel 1 (AN1) = temperature sensor on the board, used as analog in
     ADCON0 = 0;             
-    ADCON0bits.CHS = CHAN_1; //select channel 1
+    ADCON0bits.CHS = CHAN_0; //select channel 0
     ADCON0bits.ADON = 1;    //enable ADC
     ADCON0bits.GO_DONE = 0; //clear conversion status flag
     
@@ -270,4 +270,30 @@ void init(){
     //clear ADC data registers
     ADRESH = 0;
     ADRESL = 0;
+}
+
+/****************************************************************************/
+/*  I : /                                                                   */
+/*  P : launches the running mode                                           */
+/*  O : /                                                                   */
+/****************************************************************************/
+void run_filter(void){
+    //inform the filter is running
+    LCDLine_2();
+    Msg_Write("    Running     ");
+    
+    //select temp. sensor
+    ADCON0bits.CHS = CHAN_1;
+    //enable timer interrupt
+    INTCONbits.GIE = 1;
+    
+    while(Button_Left){}
+    Delay_ms(5);
+    while(!Button_Left){}
+    
+    //disable timer interrupt
+    INTCONbits.GIE = 0;
+    //select potentiometer
+    ADCON0bits.CHS = CHAN_0;
+    LCDClear();
 }
