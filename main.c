@@ -151,6 +151,8 @@ void main(void) {
         switch(filter){
             case 0: //mean low pass filter
                 run_filter();
+                x0 = 0;
+                x1 = 0;
                 break;
                 
             case 1: //low pass filter
