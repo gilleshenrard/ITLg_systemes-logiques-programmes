@@ -76,7 +76,7 @@ void __interrupt(high_priority) Int_Vect_High(void)
     while(!SSPSTATbits.BF){}
     //load the DCA value in the SPI output buffer (depending on the filter)
     switch(filter){
-        case 1: //low pass filter by two members mean
+        case 0: //low pass filter by two members mean
             x0 = ADRESH;
             SSPBUF = (x0 + x1) >>1;
             x1 = x0;
