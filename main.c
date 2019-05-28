@@ -37,6 +37,8 @@
 #define     CPT8kHz     0x4E2
 #define     CPT16kHz    0x271
 
+#define     CHAN_1      0b0001
+
 #define     PI          3.141592
 #define     D_PI         6.283184
 
@@ -125,23 +127,7 @@ void init(){
     //set PortD as output (leds)
     TRISD = 0;
     PORTD = 0;
-    
-    //enable ADC module and select AN0 (potentiometer R3 on the board)
-    ADCON0 &= 0b11000011;   //select AN0 channel
-    ADCON0bits.ADON = 1;    //enable ADC
-    ADCON0bits.GO_DONE = 0; //clear conversion status flag
-    
-    //configure ADC module operation
-    ADCON1 = 0b00001011;    //select internal voltage references
-                            //  + set AN[0:3] as analog and rest as digital
-    
-    //configure ADC justification
-    ADCON2bits.ADFM = 0;    //set AN0 as left justified
-    
-    //clear ADC data registers
-    ADRESH = 0;
-    ADRESL = 0;
-    
+
 //MSSP1 configuration is useless... LCD already uses it
 //just need to configure CS and LDAC for the DAC
 
@@ -168,7 +154,7 @@ void init(){
     
     //enable ADC module and select AN0 (potentiometer R3 on the board)
     ADCON0 = 0;             
-    ADCON0bits.CHS = 0b0001; //select channel 1 (AN1)
+    ADCON0bits.CHS = CHAN_1; //select channel 1 (AN1)
     ADCON0bits.ADON = 1;    //enable ADC
     ADCON0bits.GO_DONE = 0; //clear conversion status flag
     
