@@ -94,7 +94,7 @@ void init(){
     // disable interruptions + enable high priority
     // (interrupts disabled by default until proper function selected)
     INTCON = 1;
-    INTCONbits.GIE = 1;
+    INTCONbits.GIE = 0;
     RCONbits.IPEN = 1;
     
     // enable timer1 (16 bits, timer mode, prescaler 1:1, rest is unused)
