@@ -8,6 +8,7 @@
 #include "Progr_LCD.h"
 #include <math.h>
 
+// microcontroller configuration word
 #pragma    config	OSC = HSPLL
 #pragma    config	FCMEN = OFF
 #pragma    config	IESO = OFF
@@ -18,6 +19,7 @@
 #pragma    config	LVP = OFF
 #pragma    config	XINST = OFF
 
+// precompiler definitions
 #define     LED0    PORTDbits.AD0
 #define     LED1    PORTDbits.AD1
 #define     LED2    PORTDbits.AD2
@@ -42,10 +44,16 @@
 #define     PI          3.141592
 #define     D_PI         6.283184
 
-void init(void);
-
 int x0=0, x1=0;
 int filter = 0;
+
+void init(void);
+
+/****************************************************************************/
+/*  I : /                                                                   */
+/*  P : Deals with the timer interruption                                   */
+/*  O : /                                                                   */
+/****************************************************************************/
 void __interrupt(high_priority) Int_Vect_High(void)
 {
     LED0 = 1;
@@ -82,6 +90,11 @@ void __interrupt(high_priority) Int_Vect_High(void)
     PIR1bits.CCP1IF = 0;
 }
 
+/****************************************************************************/
+/*  I : /                                                                   */
+/*  P : Main program loop                                                   */
+/*  O : /                                                                   */
+/****************************************************************************/
 void main(void) {
     LCDInit();
     init();
@@ -90,6 +103,11 @@ void main(void) {
     return;
 }
 
+/****************************************************************************/
+/*  I : /                                                                   */
+/*  P : PIC18F8722 registers configuration                                  */
+/*  O : /                                                                   */
+/****************************************************************************/
 void init(){
     // disable interruptions + enable high priority
     // (interrupts disabled by default until proper function selected)
@@ -128,8 +146,8 @@ void init(){
     TRISD = 0;
     PORTD = 0;
 
-//MSSP1 configuration is useless... LCD already uses it
-//just need to configure CS and LDAC for the DAC
+    //MSSP1 configuration is useless... LCD already uses it
+    //just need to configure CS and LDAC for the DAC
 
     //set MSSP1 as SPI, idle state low, master mode , no collision, clock = TMR2
     //TRISD<1,4> already cleared
@@ -152,9 +170,11 @@ void init(){
     LATCbits.LATC0 = 1;
     LATCbits.LATC2 = 1;
     
-    //enable ADC module and select AN0 (potentiometer R3 on the board)
+    //enable ADC module
+    //channel 0 (AN0) = potentiometer R3 on the board
+    //channel 1 (AN1) = temperature sensor on the board, used as analog in
     ADCON0 = 0;             
-    ADCON0bits.CHS = CHAN_1; //select channel 1 (AN1)
+    ADCON0bits.CHS = CHAN_1; //select channel 1
     ADCON0bits.ADON = 1;    //enable ADC
     ADCON0bits.GO_DONE = 0; //clear conversion status flag
     
