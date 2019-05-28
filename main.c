@@ -46,7 +46,8 @@
 #define     D_PI         6.283184
 
 int FE_choice=0;
-int x0=0, x1=0;
+unsigned char buf[3600] = {0};
+int steps = 2;
 int filter = 0;
 char menu[4][17] = {"      Mean      ",
                     "    Low pass    ",
@@ -75,9 +76,14 @@ void __interrupt(high_priority) Int_Vect_High(void)
     //load the DCA value in the SPI output buffer (depending on the filter)
     switch(filter){
         case 1: //low pass filter by two members mean
-            x0 = ADRESH;
-            SSPBUF = (x0 + x1) >>1;
-            x1 = x0;
+            buf[0] = ADRESH;
+            SSPBUF = 0;
+            for(int x=0 ; x<steps ; x++){
+                SSPBUF += buf[x];
+                if(x < steps-1)
+                    buf[x+1] = buf[x];
+            }
+            SSPBUF = SSPBUF >>1;
             break;
         
         default: //#nofilter
