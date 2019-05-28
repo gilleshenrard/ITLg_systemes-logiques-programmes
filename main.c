@@ -154,14 +154,17 @@ void main(void) {
                 break;
                 
             case 1: //low pass filter
+                run_filter();
                 LED2 = 1;
                 break;
                 
             case 2: //high pass filter
+                run_filter();
                 LED3 = 1;
                 break;
                 
             case 3: //echo
+                run_filter();
                 LED4 = 1;
                 break;
                 
