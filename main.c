@@ -48,6 +48,7 @@
 int FE_choice=0;
 int x0=0, x1=0;
 int filter = 0;
+unsigned char buf[3600] = {0};
 char menu[4][17] = {"      Mean      ",
                     "    Low pass    ",
                     "   High pass    ",
