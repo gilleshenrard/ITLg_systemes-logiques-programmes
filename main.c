@@ -48,6 +48,10 @@
 int FE_choice=0;
 int x0=0, x1=0;
 int filter = 0;
+char menu[4][17] = {"      Mean      ",
+                    "    Low pass    ",
+                    "   High pass    ",
+                    "      Echo      "};
 
 void init(void);
 
@@ -106,7 +110,7 @@ void main(void) {
     Msg_Write("sample frequency");       
     ADCON0bits.CHS = CHAN_0; //select potentiometer
     while(Button_Left){
-        //read ADC
+        //read potentiometer
         ADCON0bits.GO_DONE = 1;
         while(ADCON0bits.GO_DONE){}
         FE_choice = ADRESH/128;
@@ -125,9 +129,48 @@ void main(void) {
     //debounce button
     Delay_ms(5);
     while(!Button_Left){}
-    ADCON0bits.CHS = CHAN_1; //select temp. sensor
+    LCDClear();
     
-    while(1){}
+    while(1){
+        ////////////////////////// MAIN MENU DISPLAY ///////////////////////////
+        while(Button_Left){
+            //read potentiometer
+            ADCON0bits.GO_DONE = 1;
+            while(ADCON0bits.GO_DONE){}
+            filter = ADRESH/64;
+            LCDLine_1();
+            Msg_Write(menu[filter]);
+        }
+        //debounce button
+        Delay_ms(5);
+        while(!Button_Left){}
+        LCDClear();
+        
+        ////////////////////////// MAIN MENU DISPLAY ///////////////////////////
+        switch(filter){
+            case 0: //mean low pass filter
+                LED1 = 1;
+                break;
+                
+            case 1: //low pass filter
+                LED2 = 1;
+                break;
+                
+            case 2: //high pass filter
+                LED3 = 1;
+                break;
+                
+            case 3: //echo
+                LED4 = 1;
+                break;
+                
+            default: //error
+                LED2 = 1;
+                LED3 = 1;
+                LED4 = 1;
+                break;
+        }
+    }
     return;
 }
 
