@@ -39,11 +39,13 @@
 #define     CPT8kHz     0x4E2
 #define     CPT16kHz    0x271
 
+#define     CHAN_0      0b0000
 #define     CHAN_1      0b0001
 
 #define     PI          3.141592
 #define     D_PI         6.283184
 
+int FE_choice=0;
 int x0=0, x1=0;
 int filter = 0;
 
@@ -98,6 +100,32 @@ void __interrupt(high_priority) Int_Vect_High(void)
 void main(void) {
     LCDInit();
     init();
+    
+    //sample frequency setup at boot
+    LCDLine_1();
+    Msg_Write("sample frequency");       
+    ADCON0bits.CHS = CHAN_0; //select potentiometer
+    while(Button_Left){
+        //read ADC
+        ADCON0bits.GO_DONE = 1;
+        while(ADCON0bits.GO_DONE){}
+        FE_choice = ADRESH/128;
+        //interpret choice
+        if(FE_choice){
+            LCDLine_2();
+            Msg_Write("     16 kHz     ");
+            CCPR1 = CPT16kHz;
+        }
+        else{
+            LCDLine_2();
+            Msg_Write("     8 kHz     ");
+            CCPR1 = CPT8kHz;
+        }
+    }
+    //debounce button
+    Delay_ms(5);
+    while(!Button_Left){}
+    ADCON0bits.CHS = CHAN_1; //select temp. sensor
     
     while(1){}
     return;
