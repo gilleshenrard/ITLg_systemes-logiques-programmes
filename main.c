@@ -294,6 +294,7 @@ void run_filter(void){
     //disable timer interrupt
     INTCONbits.GIE = 0;
     
+    //clear LCD SPI flag
     LCD_SPI_IF = 0;
     
     //select potentiometer
