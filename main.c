@@ -49,7 +49,7 @@
 char freq_buf[] = "0";
 int cutoff = 0;
 int FE_choice = 0;
-int x0=0, x1=0;
+int x0=0, x1=0, k0=0, w0=0, Ah=0, Al=0, B=0;
 int filter = 0;
 //unsigned char buf[3600] = {0};
 char menu[5][17] ={"      Mean      ",
@@ -60,6 +60,7 @@ char menu[5][17] ={"      Mean      ",
 
 void init(void);
 void run_filter(void);
+int get_sample_freq();
 
 /****************************************************************************/
 /*  I : /                                                                   */
@@ -183,7 +184,7 @@ void main(void) {
                     filter = ADRESH/16;
                     
                     //compute the cutoff frequency according to the pot.
-                    cutoff = (CCPR2 == CPT16kHz ? 16000 : 8000);
+                    cutoff = get_sample_freq();
                     cutoff /= 2;
                     cutoff = (int)((float)cutoff/16.0) * filter;
                     
@@ -195,6 +196,16 @@ void main(void) {
                 //debounce button
                 Delay_ms(5);
                 while(!Button_Left);
+                
+                //if cutoff > 0, compute all the components for filter equations
+                //  (multiply A and B by 128 to base computation on integers)
+                if(cutoff){
+                    k0 = (int)((float)cutoff / (float)get_sample_freq());
+                    w0 = (int)(D_PI * (float)k0);
+                    Al = 128 * (int)((float)w0 / (2.0*(float)w0));
+                    Ah = 128 * (int)(2.0 / (2.0+(float)w0));
+                    B  = 128 * (int)((2.0-(float)w0) / (2.0+(float)w0));
+                }
                 break;
                 
             default: //error
@@ -339,4 +350,13 @@ void run_filter(void){
     //clear LCD
     LCDLine_2();
     Msg_Write(freq_buf);
+}
+
+/****************************************************************************/
+/*  I : /                                                                   */
+/*  P : returns the sample frequency as an integer                          */
+/*  O : sample frequency                                                    */
+/****************************************************************************/
+int get_sample_freq(){
+    return (CCPR2 == CPT16kHz ? 16000 : 8000);
 }
