@@ -95,7 +95,7 @@ void __interrupt(high_priority) Int_Vect_High(void)
     LDAC_DAC = 1;
 
     LED0 = 0;
-    PIR1bits.CCP1IF = 0;
+    PIR2bits.CCP2IF = 0;
 }
 
 /****************************************************************************/
@@ -119,12 +119,12 @@ void main(void) {
         if(FE_choice){
             LCDLine_2();
             Msg_Write("     16 kHz     ");
-            CCPR1 = CPT16kHz;
+            CCPR2 = CPT16kHz;
         }
         else{
             LCDLine_2();
             Msg_Write("     8 kHz     ");
-            CCPR1 = CPT8kHz;
+            CCPR2 = CPT8kHz;
         }
     }
     //debounce button
@@ -200,17 +200,15 @@ void init(){
     INTCONbits.GIE = 0;
     RCONbits.IPEN = 1;
     
-    // enable timer1 (16 bits, timer mode, prescaler 1:1, rest is unused)
+    // enable timer1 (2*8 bits, timer enabled, prescaler 1:1, rest is unused)
+    // + assign timer1 as a source for ECCP2
     T1CON = 0;
-    T1CONbits.RD16 = 1;
     T1CONbits.TMR1ON = 1;
-    T1CONbits.T1CKPS0 = 0;
-    T1CONbits.T1CKPS1 = 0;
+    T3CON = 0;
     
-    // enable timer2 and ccp2 interrupts and clear interrupt flag
-    PIE2 = 0;
+    // enable timer2 (high prio) and ccp2 interrupts and clear interrupt flag
     PIE2bits.CCP2IE = 1;
-    PIR2 = 0;
+    PIR2bits.CCP2IF = 0;
     IPR2bits.CCP2IP = 1;
     
     // configure CCP2 module as comparator + enable special trigger
@@ -218,9 +216,6 @@ void init(){
     CCP2CON = 0;
     CCP2CONbits.CCP2M = 0b1011;
     CCPR2 = CPT16kHz;
-    
-    // assign timer1 as a source for ECCP2
-    T3CON = 0;
     
     //set RB0 and RA5 as inputs (buttons)
     TRISBbits.TRISB0 = 1;
