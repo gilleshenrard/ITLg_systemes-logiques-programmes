@@ -149,11 +149,6 @@ void main(void) {
         //debounce button
         Delay_ms(5);
         while(!Button_Left);
-        //clear the lcd screen
-        LCDLine_1();
-        Msg_Write("                ");
-        LCDLine_2();
-        Msg_Write("                ");
         
         ////////////////////////// MAIN MENU DISPLAY ///////////////////////////
         switch(filter){
@@ -165,17 +160,14 @@ void main(void) {
                 
             case 1: //low pass filter
                 run_filter();
-                LED2 = 1;
                 break;
                 
             case 2: //high pass filter
                 run_filter();
-                LED3 = 1;
                 break;
                 
             case 3: //echo
                 run_filter();
-                LED4 = 1;
                 break;
                 
             default: //error
@@ -304,8 +296,6 @@ void run_filter(void){
     //select potentiometer
     ADCON0bits.CHS = POT;
     //clear LCD
-    LCDLine_1();
-    Msg_Write("                ");
     LCDLine_2();
     Msg_Write("                ");
 }
