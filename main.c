@@ -302,21 +302,35 @@ void init(){
 /*  O : /                                                                   */
 /****************************************************************************/
 void run_filter(void){
+    int tmp = 0;
+    
     //inform the filter is running
     LCDLine_2();
     Msg_Write("    Running     ");
     
     //select temp. sensor
     ADCON0bits.CHS = ADC;
+    
+    //if cutoff frequency = 0, force signal copy instead of filter
+    if(!cutoff){
+        tmp = filter;
+        filter = -1;
+    }
+    
     //enable timer interrupt
     INTCONbits.GIE = 1;
     
+    //wait for button press + debounce
     while(Button_Left);
     Delay_ms(5);
     while(!Button_Left);
     
     //disable timer interrupt
     INTCONbits.GIE = 0;
+    
+    //restore filter choice
+    if(!cutoff)
+        filter = tmp;
     
     //clear LCD SPI flag
     LCD_SPI_IF = 0;
