@@ -40,7 +40,7 @@
 #define     CPT16kHz    0x271
 
 #define     POT      0b0000
-#define     ADC   0b0001
+#define     ADC      0b0001
 
 #define     PI          3.141592
 #define     D_PI         6.283184
@@ -130,7 +130,11 @@ void main(void) {
     //debounce button
     Delay_ms(5);
     while(!Button_Left);
-    LCDClear();
+    //clear LCD
+    LCDLine_1();
+    Msg_Write("                ");
+    LCDLine_2();
+    Msg_Write("                ");
     
     while(1){
         ////////////////////////// MAIN MENU DISPLAY ///////////////////////////
@@ -145,7 +149,11 @@ void main(void) {
         //debounce button
         Delay_ms(5);
         while(!Button_Left);
-        LCDClear();
+        //clear the lcd screen
+        LCDLine_1();
+        Msg_Write("                ");
+        LCDLine_2();
+        Msg_Write("                ");
         
         ////////////////////////// MAIN MENU DISPLAY ///////////////////////////
         switch(filter){
@@ -199,19 +207,20 @@ void init(){
     T1CONbits.T1CKPS0 = 0;
     T1CONbits.T1CKPS1 = 0;
     
-    // enable timer1 and ccp1 interrupts and clear interrupt flag
-    PIE1 = 0;
-    PIE1bits.TMR1IE = 1;
-    PIE1bits.CCP1IE = 1;
-    PIR1 = 0;
+    // enable timer2 and ccp2 interrupts and clear interrupt flag
+    PIE2 = 0;
+    PIE2bits.CCP2IE = 1;
+    PIR2 = 0;
+    IPR2bits.CCP2IP = 1;
     
-    // configure CCP1 module as comparator + enable special trigger
-    CCP1CON = 0b00001011;
-    CCPR1 = CPT16kHz;
+    // configure CCP2 module as comparator + enable special trigger
+    // + set default timer period to 62.5 us
+    CCP2CON = 0;
+    CCP2CONbits.CCP2M = 0b1011;
+    CCPR2 = CPT16kHz;
     
-    // assign timer1 as a source for ECCP1
+    // assign timer1 as a source for ECCP2
     T3CON = 0;
-    T3CONbits.RD16 = 1;
     
     //set RB0 and RA5 as inputs (buttons)
     TRISBbits.TRISB0 = 1;
@@ -299,5 +308,9 @@ void run_filter(void){
     
     //select potentiometer
     ADCON0bits.CHS = POT;
-    LCDClear();
+    //clear LCD
+    LCDLine_1();
+    Msg_Write("                ");
+    LCDLine_2();
+    Msg_Write("                ");
 }
