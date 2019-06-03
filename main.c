@@ -49,7 +49,8 @@
 char freq_buf[] = "0";
 int cutoff = 0;
 int FE_choice = 0;
-int x0=0, x1=0, k0=0, w0=0, Ah=0, Al=0, B=0;
+int x0=0, x1=0, prev=0, Al=0, Ah=0, B=0, cur=0;
+float k0=0, w0=0, Ahf=0, Alf=0, Bf=0;
 int filter = 0;
 //unsigned char buf[3600] = {0};
 char menu[5][17] ={"      Mean      ",
@@ -84,6 +85,14 @@ void __interrupt(high_priority) Int_Vect_High(void)
         case 0: //low pass filter by two members mean
             x0 = ADRESH;
             SSPBUF = (x0 + x1) >>1;
+            x1 = x0;
+            break;
+            
+        case 1: //low pass filter AO2
+            x0 = ADRESH;
+            cur = ((Al*(x0+x1)) + (B*prev)) >> 7;
+            SSPBUF = cur + 1;
+            prev = cur;
             x1 = x0;
             break;
         
@@ -200,11 +209,14 @@ void main(void) {
                 //if cutoff > 0, compute all the components for filter equations
                 //  (multiply A and B by 128 to base computation on integers)
                 if(cutoff){
-                    k0 = (int)((float)cutoff / (float)get_sample_freq());
-                    w0 = (int)(D_PI * (float)k0);
-                    Al = 128 * (int)((float)w0 / (2.0*(float)w0));
-                    Ah = 128 * (int)(2.0 / (2.0+(float)w0));
-                    B  = 128 * (int)((2.0-(float)w0) / (2.0+(float)w0));
+                    k0 = (float)cutoff / (float)get_sample_freq();
+                    w0 = D_PI * k0;
+                    Alf = w0 / (2.0+w0);
+                    Ahf = (2.0 / (2.0+w0));
+                    Bf  = (2.0-w0) / (2.0+w0);
+                    Al = (int)(128.0 * Alf);
+                    Ah = (int)(128.0 * Ahf);
+                    B = (int)(128.0 * B);
                 }
                 break;
                 
