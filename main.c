@@ -7,6 +7,7 @@
 
 #include "Progr_LCD.h"
 #include <math.h>
+#include <string.h>
 
 // microcontroller configuration word
 #pragma    config	OSC = HSPLL
@@ -39,20 +40,22 @@
 #define     CPT8kHz     0x4E2
 #define     CPT16kHz    0x271
 
-#define     POT      0b0000
-#define     ADC      0b0001
+#define     POT         0b0000
+#define     ADC         0b0001
 
 #define     PI          3.141592
-#define     D_PI         6.283184
+#define     D_PI        6.283184
 
-int FE_choice=0;
+int cutoff = 0;
+int FE_choice = 0;
 int x0=0, x1=0;
 int filter = 0;
-unsigned char buf[3600] = {0};
-char menu[4][17] = {"      Mean      ",
-                    "    Low pass    ",
-                    "   High pass    ",
-                    "      Echo      "};
+//unsigned char buf[3600] = {0};
+char menu[5][17] ={"      Mean      ",
+                   "    Low pass    ",
+                   "   High pass    ",
+                   "      Echo      ",
+                   "  Cutoff freq.  "};
 
 void init(void);
 void run_filter(void);
@@ -104,6 +107,8 @@ void __interrupt(high_priority) Int_Vect_High(void)
 /*  O : /                                                                   */
 /****************************************************************************/
 void main(void) {
+    char buffer[17] = "0";
+    
     LCDInit();
     init();
     
@@ -142,7 +147,8 @@ void main(void) {
             //read potentiometer
             ADCON0bits.GO_DONE = 1;
             while(ADCON0bits.GO_DONE);
-            filter = ADRESH/64;
+            filter = ADRESH/51;
+            filter = (filter > 4 ? 4 : filter);
             LCDLine_1();
             Msg_Write(menu[filter]);
         }
@@ -168,6 +174,28 @@ void main(void) {
                 
             case 3: //echo
                 run_filter();
+                break;
+                
+            case 4: //cutoff frequency choice
+                while(Button_Left){
+                    //read potentiometer
+                    ADCON0bits.GO_DONE = 1;
+                    while(ADCON0bits.GO_DONE);
+                    filter = ADRESH/16;
+                    
+                    //compute the cutoff frequency according to the pot.
+                    cutoff = (CCPR2 == CPT16kHz ? 16000 : 8000);
+                    cutoff /= 2;
+                    cutoff = (int)((float)cutoff/16.0) * filter;
+                    
+                    //print the result on the LCD
+                    sprintf(buffer, "      %4d      ", cutoff);
+                    LCDLine_2();
+                    Msg_Write(buffer);
+                }
+                //debounce button
+                Delay_ms(5);
+                while(!Button_Left);
                 break;
                 
             default: //error
