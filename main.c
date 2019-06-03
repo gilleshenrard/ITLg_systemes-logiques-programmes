@@ -46,6 +46,7 @@
 #define     PI          3.141592
 #define     D_PI        6.283184
 
+char freq_buf[] = "0";
 int cutoff = 0;
 int FE_choice = 0;
 int x0=0, x1=0;
@@ -107,8 +108,6 @@ void __interrupt(high_priority) Int_Vect_High(void)
 /*  O : /                                                                   */
 /****************************************************************************/
 void main(void) {
-    char buffer[17] = "0";
-    
     LCDInit();
     init();
     
@@ -189,9 +188,9 @@ void main(void) {
                     cutoff = (int)((float)cutoff/16.0) * filter;
                     
                     //print the result on the LCD
-                    sprintf(buffer, "      %4d      ", cutoff);
+                    sprintf(freq_buf, "      %4d      ", cutoff);
                     LCDLine_2();
-                    Msg_Write(buffer);
+                    Msg_Write(freq_buf);
                 }
                 //debounce button
                 Delay_ms(5);
@@ -339,5 +338,5 @@ void run_filter(void){
     ADCON0bits.CHS = POT;
     //clear LCD
     LCDLine_2();
-    Msg_Write("                ");
+    Msg_Write(freq_buf);
 }
