@@ -246,6 +246,7 @@ void main(void) {
                 break;
                 
             case 6: //echo delay choice
+                LED1 = 1;
                 while(Button_Left){
                     //read potentiometer
                     ADCON0bits.GO_DONE = 1;
@@ -258,16 +259,18 @@ void main(void) {
                     
                     //compute delay in seconds and print the result on the LCD
                     delaytmp = ((float)delay/(float)BUFSZ)*0.4;
-                    sprintf(freq_buf, "      %4.2f s    ", delaytmp);
+                    sprintf(freq_buf, "%4dHz    %4.2f s", cutoff, delaytmp);
                     LCDLine_2();
                     Msg_Write(freq_buf);
                 }
                 //debounce button
                 Delay_ms(5);
                 while(!Button_Left);
+                LED1 = 0;
                 break;
                 
             case 7: //cutoff frequency choice
+                LED1 = 1;
                 while(Button_Left){
                     //read potentiometer
                     ADCON0bits.GO_DONE = 1;
@@ -280,7 +283,7 @@ void main(void) {
                     cutoff = (int)((float)cutoff/16.0) * filter;
                     
                     //print the result on the LCD
-                    sprintf(freq_buf, "      %4d      ", cutoff);
+                    sprintf(freq_buf, "%4dHz    %4.2f s", cutoff, delaytmp);
                     LCDLine_2();
                     Msg_Write(freq_buf);
                 }
@@ -300,6 +303,7 @@ void main(void) {
                     Ah = (int)(128.0 * Ahf);
                     B = (int)(128.0 * B);
                 }
+                LED1 = 0;
                 break;
                 
             default: //error
