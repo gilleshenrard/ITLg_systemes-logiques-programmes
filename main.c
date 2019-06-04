@@ -46,13 +46,15 @@
 #define     PI          3.141592
 #define     D_PI        6.283184
 
+#define     BUFSZ       3500
+
 char freq_buf[] = "0";
 int cutoff = 0;
 int FE_choice = 0;
-int x0=0, x1=0, prev=0, Al=0, Ah=0, B=0, cur=0;
+int x0=0, x1=0, prev=0, Al=0, Ah=0, B=0, cur=0, final=0, step=BUFSZ/2;
 float k0=0, w0=0, Ahf=0, Alf=0, Bf=0;
 int filter = 0;
-//unsigned char buf[3600] = {0};
+unsigned char buf[BUFSZ] = {0};
 char menu[5][17] ={"      Mean      ",
                    "    Low pass    ",
                    "   High pass    ",
@@ -103,6 +105,17 @@ void __interrupt(high_priority) Int_Vect_High(void)
             prev = cur;
             x1 = x0;
             break;
+            
+        case 3: //echo filter
+            x0 = ADRESH;
+            buf[cur] = x0;
+            prev = (cur-step >= 0 ? cur-step : BUFSZ-(step-cur)-1);
+            x1 = buf[prev];
+            final = ((5*x0) + (3*x1)) >>3;
+            SSPBUF = final + 1;
+            cur++;
+            cur %= BUFSZ;
+            break;
         
         default: //#nofilter
             SSPBUF = ADRESH + 1;
@@ -126,6 +139,8 @@ void __interrupt(high_priority) Int_Vect_High(void)
 /*  O : /                                                                   */
 /****************************************************************************/
 void main(void) {
+    char tmp = 0;
+    
     LCDInit();
     init();
     
@@ -189,8 +204,20 @@ void main(void) {
                 run_filter();
                 break;
                 
-            case 3: //echo
+            case 3: //echo filter
+                //force sampling freq. to 8kHz for echo to sound right
+                tmp = CCPR2;
+                CCPR2 = CPT8kHz;
+                
+                //reset pointers and variables, then run filter
+                x0 = x1 = cur = 0;
                 run_filter();
+                
+                //reset the buffer after use
+                memset(&buf, 0, sizeof(buf));
+                
+                // restore sampling freq. once filter is off
+                CCPR2 = tmp;
                 break;
                 
             case 4: //cutoff frequency choice
