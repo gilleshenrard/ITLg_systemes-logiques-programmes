@@ -95,6 +95,14 @@ void __interrupt(high_priority) Int_Vect_High(void)
             prev = cur;
             x1 = x0;
             break;
+            
+        case 2: //high pass filter AO2
+            x0 = ADRESH;
+            cur = ((Ah*(x0-x1)) + (B*prev)) >> 7;
+            SSPBUF = cur + 127;
+            prev = cur;
+            x1 = x0;
+            break;
         
         default: //#nofilter
             SSPBUF = ADRESH + 1;
