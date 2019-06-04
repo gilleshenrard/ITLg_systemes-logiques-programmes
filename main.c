@@ -93,7 +93,19 @@ void __interrupt(high_priority) Int_Vect_High(void)
             x1 = x0;
             break;
             
-        case 1: //low pass filter AO2
+        case 1: //low pass filter by four members mean
+            x0 = ADRESH;
+            SSPBUF = (x0 + x1) >>1;
+            x1 = x0;
+            break;
+            
+        case 2: //low pass filter by eight members mean
+            x0 = ADRESH;
+            SSPBUF = (x0 + x1) >>1;
+            x1 = x0;
+            break;
+            
+        case 3: //low pass filter AO2
             x0 = ADRESH;
             cur = ((Al*(x0+x1)) + (B*prev)) >> 7;
             SSPBUF = cur + 1;
@@ -101,7 +113,7 @@ void __interrupt(high_priority) Int_Vect_High(void)
             x1 = x0;
             break;
             
-        case 2: //high pass filter AO2
+        case 4: //high pass filter AO2
             x0 = ADRESH;
             cur = ((Ah*(x0-x1)) + (B*prev)) >> 7;
             SSPBUF = cur + 127;
@@ -109,15 +121,12 @@ void __interrupt(high_priority) Int_Vect_High(void)
             x1 = x0;
             break;
             
-        case 3: //echo filter
-            x0 = ADRESH;
-            buf[cur] = x0;
-            prev = (cur-step >= 0 ? cur-step : BUFSZ-(step-cur)-1);
-            x1 = buf[prev];
-            final = ((5*x0) + (3*x1)) >>3;
-            SSPBUF = final + 1;
-            cur++;
-            cur %= BUFSZ;
+        case 5: //echo filter
+            buf[x0] = ADRESH;
+            cur = ((5 * buf[x0]) + (3 * buf[x1])) >> 3;
+            SSPBUF = cur + 1;
+            x0 = x1;
+            x1 = (x1 + 1) % delay;
             break;
         
         default: //#nofilter
@@ -226,7 +235,7 @@ void main(void) {
                 CCPR2 = CPT8kHz;
                 
                 //reset pointers and variables, then run filter
-                x0 = x1 = cur = 0;
+                x0 = x1 = 0;
                 run_filter();
                 
                 //reset the buffer after use
