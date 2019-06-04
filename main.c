@@ -46,20 +46,23 @@
 #define     PI          3.141592
 #define     D_PI        6.283184
 
-#define     BUFSZ       3500
+#define     BUFSZ       3200
 
 char freq_buf[] = "0";
 int cutoff = 0;
 int FE_choice = 0;
 int x0=0, x1=0, prev=0, Al=0, Ah=0, B=0, cur=0, final=0, step=BUFSZ/2;
 float k0=0, w0=0, Ahf=0, Alf=0, Bf=0;
-int filter = 0;
-unsigned char buf[BUFSZ] = {0};
-char menu[5][17] ={"      Mean      ",
+int filter=0, delay=0;
+char menu[8][17] ={"     Mean 2     ",
+                   "     Mean 4     ",
+                   "     Mean 8     ",
                    "    Low pass    ",
                    "   High pass    ",
                    "      Echo      ",
+                   "      Delay     ",
                    "  Cutoff freq.  "};
+unsigned char buf[BUFSZ] = {0};
 
 void init(void);
 void run_filter(void);
@@ -140,6 +143,7 @@ void __interrupt(high_priority) Int_Vect_High(void)
 /****************************************************************************/
 void main(void) {
     char tmp = 0;
+    float delaytmp = 0.0;
     
     LCDInit();
     init();
@@ -179,8 +183,8 @@ void main(void) {
             //read potentiometer
             ADCON0bits.GO_DONE = 1;
             while(ADCON0bits.GO_DONE);
-            filter = ADRESH/51;
-            filter = (filter > 4 ? 4 : filter);
+            filter = ADRESH/32;
+            filter = (filter > 7 ? 7 : filter);
             LCDLine_1();
             Msg_Write(menu[filter]);
         }
@@ -190,21 +194,33 @@ void main(void) {
         
         ////////////////////////// MAIN MENU DISPLAY ///////////////////////////
         switch(filter){
-            case 0: //mean low pass filter
+            case 0: //2 terms mean low pass filter
                 run_filter();
                 x0 = 0;
                 x1 = 0;
                 break;
                 
-            case 1: //low pass filter
+            case 1: //4 terms mean low pass filter
+                run_filter();
+                x0 = 0;
+                x1 = 0;
+                break;
+                
+            case 2: //8 terms mean low pass filter
+                run_filter();
+                x0 = 0;
+                x1 = 0;
+                break;
+                
+            case 3: //low pass filter
                 run_filter();
                 break;
                 
-            case 2: //high pass filter
+            case 4: //high pass filter
                 run_filter();
                 break;
                 
-            case 3: //echo filter
+            case 5: //echo filter
                 //force sampling freq. to 8kHz for echo to sound right
                 tmp = CCPR2;
                 CCPR2 = CPT8kHz;
@@ -220,7 +236,29 @@ void main(void) {
                 CCPR2 = tmp;
                 break;
                 
-            case 4: //cutoff frequency choice
+            case 6: //echo delay choice
+                while(Button_Left){
+                    //read potentiometer
+                    ADCON0bits.GO_DONE = 1;
+                    while(ADCON0bits.GO_DONE);
+                    delay = ADRESH/16;
+                    
+                    //compute the echo delay (size of the buffer compared to total size)
+                    if(delay > 0)
+                        delay = (int)(((float)delay/15.0) * (float)BUFSZ);
+                    
+                    //compute delay in seconds and print the result on the LCD
+                    delaytmp = ((float)delay/(float)BUFSZ)*0.4;
+                    sprintf(freq_buf, "      %4.2f s    ", delaytmp);
+                    LCDLine_2();
+                    Msg_Write(freq_buf);
+                }
+                //debounce button
+                Delay_ms(5);
+                while(!Button_Left);
+                break;
+                
+            case 7: //cutoff frequency choice
                 while(Button_Left){
                     //read potentiometer
                     ADCON0bits.GO_DONE = 1;
