@@ -30,11 +30,11 @@
 #define     Button_Left PORTBbits.RB0
 #define     Button_Right PORTAbits.RA5
 
+// precompiler options that define card pinout
 #define     SDO         PORTCbits.RC5
 #define     SCK         PORTCbits.RC3
 #define     CS_DAC      PORTCbits.RC2
 #define     LDAC_DAC    PORTCbits.RC0
-
 #define     ANALOG      PORTAbits.RA1   //temperature sensor on the card
 
 #define     CPT8kHz     0x4E2
