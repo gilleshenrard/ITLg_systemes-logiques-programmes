@@ -428,8 +428,8 @@ void run_filter(void){
     //select temp. sensor
     ADCON0bits.CHS = ADC;
     
-    //if cutoff frequency = 0, force signal copy instead of filter
-    if(!cutoff){
+    //if cutoff frequency = 0, force signal copy instead of filter (except for echo)
+    if(!cutoff && filter!=ECHO){
         tmp = filter;
         filter = -1;
     }
