@@ -48,6 +48,15 @@
 
 #define     BUFSZ       3200
 
+#define     MEAN_2      0
+#define     MEAN_4      1
+#define     MEAN_8      2
+#define     LOW_P       3
+#define     HIGH_P      4
+#define     ECHO        5
+#define     DELAY       6
+#define     FREQ        7
+
 char freq_buf[] = "0";
 int cutoff = 0;
 int FE_choice = 0;
@@ -87,25 +96,25 @@ void __interrupt(high_priority) Int_Vect_High(void)
     while(!SSPSTATbits.BF);
     //load the DCA value in the SPI output buffer (depending on the filter)
     switch(filter){
-        case 0: //low pass filter by two members mean
+        case MEAN_2: //low pass filter by two members mean
             x0 = ADRESH;
             SSPBUF = (x0 + x1) >>1;
             x1 = x0;
             break;
             
-        case 1: //low pass filter by four members mean
+        case MEAN_4: //low pass filter by four members mean
             x0 = ADRESH;
             SSPBUF = (x0 + x1) >>1;
             x1 = x0;
             break;
             
-        case 2: //low pass filter by eight members mean
+        case MEAN_8: //low pass filter by eight members mean
             x0 = ADRESH;
             SSPBUF = (x0 + x1) >>1;
             x1 = x0;
             break;
             
-        case 3: //low pass filter AO2
+        case LOW_P: //low pass filter AO2
             x0 = ADRESH;
             cur = ((Al*(x0+x1)) + (B*prev)) >> 7;
             SSPBUF = cur + 1;
@@ -113,7 +122,7 @@ void __interrupt(high_priority) Int_Vect_High(void)
             x1 = x0;
             break;
             
-        case 4: //high pass filter AO2
+        case HIGH_P: //high pass filter AO2
             x0 = ADRESH;
             cur = ((Ah*(x0-x1)) + (B*prev)) >> 7;
             SSPBUF = cur + 127;
@@ -121,7 +130,7 @@ void __interrupt(high_priority) Int_Vect_High(void)
             x1 = x0;
             break;
             
-        case 5: //echo filter
+        case ECHO: //echo filter
             buf[x0] = ADRESH;
             cur = ((5 * buf[x0]) + (3 * buf[x1])) >> 3;
             SSPBUF = cur + 1;
@@ -203,33 +212,33 @@ void main(void) {
         
         ////////////////////////// MAIN MENU DISPLAY ///////////////////////////
         switch(filter){
-            case 0: //2 terms mean low pass filter
+            case MEAN_2: //2 terms mean low pass filter
                 run_filter();
                 x0 = 0;
                 x1 = 0;
                 break;
                 
-            case 1: //4 terms mean low pass filter
+            case MEAN_4: //4 terms mean low pass filter
                 run_filter();
                 x0 = 0;
                 x1 = 0;
                 break;
                 
-            case 2: //8 terms mean low pass filter
+            case MEAN_8: //8 terms mean low pass filter
                 run_filter();
                 x0 = 0;
                 x1 = 0;
                 break;
                 
-            case 3: //low pass filter
+            case LOW_P: //low pass filter
                 run_filter();
                 break;
                 
-            case 4: //high pass filter
+            case HIGH_P: //high pass filter
                 run_filter();
                 break;
                 
-            case 5: //echo filter
+            case ECHO: //echo filter
                 //force sampling freq. to 8kHz for echo to sound right
                 tmp = CCPR2;
                 CCPR2 = CPT8kHz;
@@ -245,7 +254,7 @@ void main(void) {
                 CCPR2 = tmp;
                 break;
                 
-            case 6: //echo delay choice
+            case DELAY: //echo delay choice
                 LED1 = 1;
                 while(Button_Left){
                     //read potentiometer
@@ -269,7 +278,7 @@ void main(void) {
                 LED1 = 0;
                 break;
                 
-            case 7: //cutoff frequency choice
+            case FREQ: //cutoff frequency choice
                 LED1 = 1;
                 while(Button_Left){
                     //read potentiometer
