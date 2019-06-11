@@ -60,7 +60,8 @@
 char freq_buf[] = "0";
 int cutoff = 0;
 int FE_choice = 0;
-int x0=0, x1=0, prev=0, Al=0, Ah=0, B=0, cur=0, final=0, step=BUFSZ/2;
+int x0=0, x1=0, x2=0, x3=0, x4=0, x5=0,x6=0, x7=0;
+int prev=0, Al=0, Ah=0, B=0, cur=0, final=0, step=BUFSZ/2;
 float k0=0, w0=0, Ahf=0, Alf=0, Bf=0;
 int filter=0, delay=0;
 char menu[8][17] ={"     Mean 2     ",
@@ -84,6 +85,7 @@ int get_sample_freq();
 /****************************************************************************/
 void __interrupt(high_priority) Int_Vect_High(void)
 {
+    int tmp = 0;
     LED0 = 1;
 
     //launch ADC
@@ -98,19 +100,30 @@ void __interrupt(high_priority) Int_Vect_High(void)
     switch(filter){
         case MEAN_2: //low pass filter by two members mean
             x0 = ADRESH;
-            SSPBUF = (x0 + x1) >>1;
+            tmp = (x0 + x1) >>1;
+            SSPBUF = tmp + 1;
             x1 = x0;
             break;
             
         case MEAN_4: //low pass filter by four members mean
             x0 = ADRESH;
-            SSPBUF = (x0 + x1) >>1;
+            tmp = (x0 + x1 + x2 + x3) >>2;
+            SSPBUF = tmp + 1;
+            x3 = x2;
+            x2 = x1;
             x1 = x0;
             break;
             
         case MEAN_8: //low pass filter by eight members mean
             x0 = ADRESH;
-            SSPBUF = (x0 + x1) >>1;
+            tmp = (x0 + x1 + x2 + x3 + x4 + x5 + x6 + x7) >>3;
+            SSPBUF = tmp + 1;
+            x7 = x6;
+            x6 = x5;
+            x5 = x4;
+            x4 = x3;
+            x3 = x2;
+            x2 = x1;
             x1 = x0;
             break;
             
@@ -139,6 +152,7 @@ void __interrupt(high_priority) Int_Vect_High(void)
             break;
         
         default: //#nofilter
+            LED2 = 1;
             SSPBUF = ADRESH + 1;
             break;
     }
@@ -214,20 +228,14 @@ void main(void) {
         switch(filter){
             case MEAN_2: //2 terms mean low pass filter
                 run_filter();
-                x0 = 0;
-                x1 = 0;
                 break;
                 
             case MEAN_4: //4 terms mean low pass filter
                 run_filter();
-                x0 = 0;
-                x1 = 0;
                 break;
                 
             case MEAN_8: //8 terms mean low pass filter
                 run_filter();
-                x0 = 0;
-                x1 = 0;
                 break;
                 
             case LOW_P: //low pass filter
@@ -321,6 +329,8 @@ void main(void) {
                 LED4 = 1;
                 break;
         }
+        //reset all buffers before returning to menu
+        x7 = x6 = x5 = x4 = x3 = x2 = x1 = 0;
     }
     return;
 }
@@ -419,7 +429,7 @@ void init(){
 /*  O : /                                                                   */
 /****************************************************************************/
 void run_filter(void){
-    int tmp = 0;
+    int tmp = filter;
     
     //inform the filter is running
     LCDLine_2();
@@ -428,11 +438,13 @@ void run_filter(void){
     //select temp. sensor
     ADCON0bits.CHS = ADC;
     
-    //if cutoff frequency = 0, force signal copy instead of filter (except for echo)
-    if(!cutoff && filter!=ECHO){
-        tmp = filter;
+    //if cutoff frequency = 0, force signal copy instead of LP or HP filter
+    if(!cutoff && (filter==LOW_P || filter==HIGH_P))
         filter = -1;
-    }
+    
+    //if delay = 0, force signal copy instead of echo
+    if(!delay && filter==ECHO)
+        filter = -1;
     
     //enable timer interrupt
     INTCONbits.GIE = 1;
@@ -445,9 +457,8 @@ void run_filter(void){
     //disable timer interrupt
     INTCONbits.GIE = 0;
     
-    //restore filter choice
-    if(!cutoff)
-        filter = tmp;
+    //restore filter choice after eventual omission
+    filter = tmp;
     
     //clear LCD SPI flag
     LCD_SPI_IF = 0;
